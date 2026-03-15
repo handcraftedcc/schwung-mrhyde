@@ -210,7 +210,7 @@ int main() {
         fail("lfo_rate should accept and return synced fraction labels");
     }
 
-    char hierarchy_buf[8192];
+    char hierarchy_buf[32768];
     memset(hierarchy_buf, 0, sizeof(hierarchy_buf));
     if (api->get_param(inst, "ui_hierarchy", hierarchy_buf, (int)sizeof(hierarchy_buf)) <= 0) {
         fail("ui_hierarchy get_param returned empty");
@@ -237,6 +237,45 @@ int main() {
         fail("chain_params should be a JSON array");
     }
 
+    char state_buf[16384];
+    memset(state_buf, 0, sizeof(state_buf));
+    if (api->get_param(inst, "state", state_buf, (int)sizeof(state_buf)) <= 0) {
+        fail("state get_param returned empty");
+    }
+    if (state_buf[0] != '{') {
+        fail("state should be a JSON object");
+    }
+
+    void *inst_from_state = api->create_instance("src", state_buf);
+    if (!inst_from_state) fail("create_instance from state failed");
+
+    char restored_model_buf[32];
+    memset(restored_model_buf, 0, sizeof(restored_model_buf));
+    if (api->get_param(inst_from_state, "model", restored_model_buf, (int)sizeof(restored_model_buf)) < 0) {
+        fail("get_param(model) failed on restored instance");
+    }
+    if (strcmp(restored_model_buf, "fm_2op") != 0) {
+        fail("state restore via json_defaults should restore model");
+    }
+
+    char restored_assign_buf[32];
+    memset(restored_assign_buf, 0, sizeof(restored_assign_buf));
+    if (api->get_param(inst_from_state, "assign1_target", restored_assign_buf, (int)sizeof(restored_assign_buf)) < 0) {
+        fail("get_param(assign1_target) failed on restored instance");
+    }
+    if (strcmp(restored_assign_buf, "morph") != 0) {
+        fail("state restore via json_defaults should restore assign target");
+    }
+
+    char restored_cutoff_mod_buf[32];
+    memset(restored_cutoff_mod_buf, 0, sizeof(restored_cutoff_mod_buf));
+    if (api->get_param(inst_from_state, "cutoff_mod_lfo_amt", restored_cutoff_mod_buf, (int)sizeof(restored_cutoff_mod_buf)) < 0) {
+        fail("get_param(cutoff_mod_lfo_amt) failed on restored instance");
+    }
+    if (strcmp(restored_cutoff_mod_buf, "0.5") != 0) {
+        fail("state restore via json_defaults should restore cutoff mod amount");
+    }
+
     uint8_t note_on[] = {0x90, 60, 100};
     api->on_midi(inst, note_on, 3, 0);
 
@@ -253,6 +292,7 @@ int main() {
     uint8_t note_off[] = {0x80, 60, 0};
     api->on_midi(inst, note_off, 3, 0);
 
+    api->destroy_instance(inst_from_state);
     api->destroy_instance(inst);
     printf("PASS: plaits plugin smoke test\n");
     return 0;

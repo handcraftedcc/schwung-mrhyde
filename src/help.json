@@ -57,9 +57,9 @@
       "title": "Mod",
       "lines": [
         "Pages:",
-        " Assign 1/2,",
         " Pitch, Harmonics,",
-        " Timbre, Cutoff",
+        " Timbre, Cutoff,",
+        " Assign 1/2",
         "",
         "Assign 1/2 include",
         "target + source",

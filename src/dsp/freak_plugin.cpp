@@ -352,6 +352,39 @@ static int extract_json_value(const char *json,
     return -1;
 }
 
+static int json_get_number(const char *json, const char *key, float *out) {
+    if (!json || !key || !out) return -1;
+    char needle[96];
+    snprintf(needle, sizeof(needle), "\"%s\":", key);
+    const char *p = strstr(json, needle);
+    if (!p) return -1;
+    p += strlen(needle);
+    while (*p == ' ' || *p == '\t') p++;
+    char *endp = NULL;
+    double v = strtod(p, &endp);
+    if (!endp || endp == p) return -1;
+    *out = (float)v;
+    return 0;
+}
+
+static int json_get_string(const char *json, const char *key, char *out, int out_len) {
+    if (!json || !key || !out || out_len <= 1) return -1;
+    char needle[96];
+    snprintf(needle, sizeof(needle), "\"%s\":", key);
+    const char *p = strstr(json, needle);
+    if (!p) return -1;
+    p += strlen(needle);
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '"') return -1;
+    p++;
+    int n = 0;
+    while (*p && *p != '"' && n < out_len - 1) {
+        out[n++] = *p++;
+    }
+    out[n] = '\0';
+    return (*p == '"') ? 0 : -1;
+}
+
 static int get_param_from_module_json(const freak_instance_t *inst,
                                       const char *field,
                                       char opener,
@@ -448,6 +481,88 @@ static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *b
 
 #define GET_ENUM_FIELD(NAME, FIELD) \
     if (strcmp(key, NAME) == 0) return write_enum_text(NAME, inst->params.FIELD, buf, buf_len)
+
+static const char *const kStateKeys[] = {
+    "model",
+    "pitch",
+    "harmonics",
+    "timbre",
+    "morph",
+    "fm_amount",
+    "filter_mode",
+    "filter_cutoff",
+    "filter_resonance",
+    "lpg_decay",
+    "lpg_color",
+    "pitch_mod_lfo_amt",
+    "pitch_mod_env_amt",
+    "pitch_mod_cycle_env_amt",
+    "pitch_mod_random_amt",
+    "pitch_mod_velocity_amt",
+    "pitch_mod_poly_aftertouch_amt",
+    "harmonics_mod_lfo_amt",
+    "harmonics_mod_env_amt",
+    "harmonics_mod_cycle_env_amt",
+    "harmonics_mod_random_amt",
+    "harmonics_mod_velocity_amt",
+    "harmonics_mod_poly_aftertouch_amt",
+    "timbre_mod_lfo_amt",
+    "timbre_mod_env_amt",
+    "timbre_mod_cycle_env_amt",
+    "timbre_mod_random_amt",
+    "timbre_mod_velocity_amt",
+    "timbre_mod_poly_aftertouch_amt",
+    "cutoff_mod_lfo_amt",
+    "cutoff_mod_env_amt",
+    "cutoff_mod_cycle_env_amt",
+    "cutoff_mod_random_amt",
+    "cutoff_mod_velocity_amt",
+    "cutoff_mod_poly_aftertouch_amt",
+    "assign1_target",
+    "assign1_mod_lfo_amt",
+    "assign1_mod_env_amt",
+    "assign1_mod_cycle_env_amt",
+    "assign1_mod_random_amt",
+    "assign1_mod_velocity_amt",
+    "assign1_mod_poly_aftertouch_amt",
+    "assign2_target",
+    "assign2_mod_lfo_amt",
+    "assign2_mod_env_amt",
+    "assign2_mod_cycle_env_amt",
+    "assign2_mod_random_amt",
+    "assign2_mod_velocity_amt",
+    "assign2_mod_poly_aftertouch_amt",
+    "lfo_shape",
+    "lfo_rate",
+    "lfo_sync",
+    "lfo_retrig",
+    "lfo_phase",
+    "env_attack_ms",
+    "env_decay_ms",
+    "env_sustain",
+    "env_release_ms",
+    "env_retrig",
+    "cycle_attack_ms",
+    "cycle_decay_ms",
+    "cycle_shape",
+    "cycle_sync",
+    "cycle_retrig",
+    "cycle_bipolar",
+    "random_mode",
+    "random_rate",
+    "random_sync",
+    "random_slew",
+    "random_retrig",
+    "velocity_curve",
+    "poly_aftertouch_curve",
+    "voice_mode",
+    "polyphony",
+    "unison",
+    "detune",
+    "spread",
+    "glide_ms"
+};
+constexpr int kStateKeyCount = (int)(sizeof(kStateKeys) / sizeof(kStateKeys[0]));
 
 static int set_param_internal(freak_instance_t *inst, const char *key, const char *val) {
     if (!inst || !key || !val) return 0;
@@ -778,15 +893,74 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
     return -1;
 }
 
+static int state_value_should_be_string(const char *value) {
+    if (!value || !value[0]) return 1;
+    char *endp = NULL;
+    strtod(value, &endp);
+    return !(endp && *endp == '\0');
+}
+
+static void apply_state_json(freak_instance_t *inst, const char *json) {
+    if (!inst || !json || !json[0]) return;
+
+    char val_buf[128];
+    char num_buf[64];
+    for (int i = 0; i < kStateKeyCount; ++i) {
+        const char *key = kStateKeys[i];
+        float num = 0.0f;
+        if (json_get_number(json, key, &num) == 0) {
+            snprintf(num_buf, sizeof(num_buf), "%.9g", num);
+            set_param_internal(inst, key, num_buf);
+            continue;
+        }
+        if (json_get_string(json, key, val_buf, sizeof(val_buf)) == 0) {
+            set_param_internal(inst, key, val_buf);
+        }
+    }
+}
+
+static int build_state_json(const freak_instance_t *inst, char *buf, int buf_len) {
+    if (!inst || !buf || buf_len <= 2) return -1;
+
+    int off = 0;
+    int first = 1;
+    off += snprintf(buf + off, buf_len - off, "{");
+    for (int i = 0; i < kStateKeyCount; ++i) {
+        char value[128];
+        if (get_param_internal(inst, kStateKeys[i], value, sizeof(value)) < 0) {
+            continue;
+        }
+        if (!first) off += snprintf(buf + off, buf_len - off, ",");
+        first = 0;
+
+        if (state_value_should_be_string(value)) {
+            off += snprintf(buf + off, buf_len - off, "\"%s\":\"%s\"", kStateKeys[i], value);
+        } else {
+            off += snprintf(buf + off, buf_len - off, "\"%s\":%s", kStateKeys[i], value);
+        }
+
+        if (off >= buf_len - 2) return -1;
+    }
+    off += snprintf(buf + off, buf_len - off, "}");
+    return (off < buf_len) ? off : -1;
+}
+
 static void *create_instance(const char *module_dir, const char *json_defaults) {
-    (void)module_dir;
-    (void)json_defaults;
     freak_instance_t *inst = new freak_instance_t();
     ppf_default_params(&inst->params);
     inst->module_dir[0] = '\0';
     if (module_dir && module_dir[0]) {
         snprintf(inst->module_dir, sizeof(inst->module_dir), "%s", module_dir);
     }
+
+    if (json_defaults && json_defaults[0]) {
+        apply_state_json(inst, json_defaults);
+        char nested_state[16384];
+        if (extract_json_value(json_defaults, "state", '{', '}', nested_state, sizeof(nested_state)) > 0) {
+            apply_state_json(inst, nested_state);
+        }
+    }
+
     inst->engine.init();
     inst->engine.set_params(inst->params);
     set_error(inst, NULL);
@@ -828,6 +1002,13 @@ static void set_param(void *instance, const char *key, const char *val) {
     freak_instance_t *inst = (freak_instance_t *)instance;
     if (!inst || !key || !val) return;
 
+    if (strcmp(key, "state") == 0) {
+        apply_state_json(inst, val);
+        inst->engine.set_params(inst->params);
+        set_error(inst, NULL);
+        return;
+    }
+
     set_error(inst, NULL);
     if (!set_param_internal(inst, key, val)) {
         char line[256];
@@ -842,6 +1023,9 @@ static void set_param(void *instance, const char *key, const char *val) {
 static int get_param(void *instance, const char *key, char *buf, int buf_len) {
     freak_instance_t *inst = (freak_instance_t *)instance;
     if (!inst || !key || !buf || buf_len <= 0) return -1;
+    if (strcmp(key, "state") == 0) {
+        return build_state_json(inst, buf, buf_len);
+    }
     if (strcmp(key, "ui_hierarchy") == 0) {
         return get_ui_hierarchy_with_mod_stars(inst, buf, buf_len);
     }

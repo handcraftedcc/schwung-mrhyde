@@ -28,7 +28,8 @@
             "morph",
             "fm_amount",
             "lpg_decay",
-            "lpg_color"
+            "lpg_color",
+            "filter_cutoff"
           ],
           "params": [
             "model",
@@ -59,6 +60,11 @@
         },
         "filter": {
           "name": "Filter",
+          "knobs": [
+            "filter_mode",
+            "filter_cutoff",
+            "filter_resonance"
+          ],
           "params": [
             "filter_mode",
             "filter_cutoff",
@@ -68,14 +74,6 @@
         "mod": {
           "name": "Mod",
           "params": [
-            {
-              "label": "Assign 1",
-              "level": "assign1_mod"
-            },
-            {
-              "label": "Assign 2",
-              "level": "assign2_mod"
-            },
             {
               "label": "Pitch",
               "level": "pitch_mod"
@@ -91,11 +89,28 @@
             {
               "label": "Cutoff",
               "level": "cutoff_mod"
+            },
+            {
+              "label": "Assign 1",
+              "level": "assign1_mod"
+            },
+            {
+              "label": "Assign 2",
+              "level": "assign2_mod"
             }
           ]
         },
         "assign1_mod": {
           "name": "Assign 1",
+          "knobs": [
+            "assign1_target",
+            "assign1_mod_lfo_amt",
+            "assign1_mod_env_amt",
+            "assign1_mod_cycle_env_amt",
+            "assign1_mod_random_amt",
+            "assign1_mod_velocity_amt",
+            "assign1_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "assign1_target",
             "assign1_mod_lfo_amt",
@@ -108,6 +123,15 @@
         },
         "assign2_mod": {
           "name": "Assign 2",
+          "knobs": [
+            "assign2_target",
+            "assign2_mod_lfo_amt",
+            "assign2_mod_env_amt",
+            "assign2_mod_cycle_env_amt",
+            "assign2_mod_random_amt",
+            "assign2_mod_velocity_amt",
+            "assign2_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "assign2_target",
             "assign2_mod_lfo_amt",
@@ -120,6 +144,14 @@
         },
         "pitch_mod": {
           "name": "Pitch",
+          "knobs": [
+            "pitch_mod_lfo_amt",
+            "pitch_mod_env_amt",
+            "pitch_mod_cycle_env_amt",
+            "pitch_mod_random_amt",
+            "pitch_mod_velocity_amt",
+            "pitch_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "pitch_mod_lfo_amt",
             "pitch_mod_env_amt",
@@ -131,6 +163,14 @@
         },
         "harmonics_mod": {
           "name": "Harmonics",
+          "knobs": [
+            "harmonics_mod_lfo_amt",
+            "harmonics_mod_env_amt",
+            "harmonics_mod_cycle_env_amt",
+            "harmonics_mod_random_amt",
+            "harmonics_mod_velocity_amt",
+            "harmonics_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "harmonics_mod_lfo_amt",
             "harmonics_mod_env_amt",
@@ -142,6 +182,14 @@
         },
         "timbre_mod": {
           "name": "Timbre",
+          "knobs": [
+            "timbre_mod_lfo_amt",
+            "timbre_mod_env_amt",
+            "timbre_mod_cycle_env_amt",
+            "timbre_mod_random_amt",
+            "timbre_mod_velocity_amt",
+            "timbre_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "timbre_mod_lfo_amt",
             "timbre_mod_env_amt",
@@ -153,6 +201,14 @@
         },
         "cutoff_mod": {
           "name": "Cutoff",
+          "knobs": [
+            "cutoff_mod_lfo_amt",
+            "cutoff_mod_env_amt",
+            "cutoff_mod_cycle_env_amt",
+            "cutoff_mod_random_amt",
+            "cutoff_mod_velocity_amt",
+            "cutoff_mod_poly_aftertouch_amt"
+          ],
           "params": [
             "cutoff_mod_lfo_amt",
             "cutoff_mod_env_amt",
@@ -193,6 +249,13 @@
         },
         "lfo": {
           "name": "LFO",
+          "knobs": [
+            "lfo_shape",
+            "lfo_rate",
+            "lfo_sync",
+            "lfo_retrig",
+            "lfo_phase"
+          ],
           "params": [
             "lfo_shape",
             "lfo_rate",
@@ -203,6 +266,13 @@
         },
         "envelope": {
           "name": "Envelope",
+          "knobs": [
+            "env_attack_ms",
+            "env_decay_ms",
+            "env_sustain",
+            "env_release_ms",
+            "env_retrig"
+          ],
           "params": [
             "env_attack_ms",
             "env_decay_ms",
@@ -213,6 +283,14 @@
         },
         "cycle_env": {
           "name": "Cycling Envelope",
+          "knobs": [
+            "cycle_attack_ms",
+            "cycle_decay_ms",
+            "cycle_shape",
+            "cycle_sync",
+            "cycle_retrig",
+            "cycle_bipolar"
+          ],
           "params": [
             "cycle_attack_ms",
             "cycle_decay_ms",
@@ -224,6 +302,13 @@
         },
         "random": {
           "name": "Random",
+          "knobs": [
+            "random_mode",
+            "random_rate",
+            "random_sync",
+            "random_slew",
+            "random_retrig"
+          ],
           "params": [
             "random_mode",
             "random_rate",
@@ -234,18 +319,32 @@
         },
         "velocity": {
           "name": "Velocity",
+          "knobs": [
+            "velocity_curve"
+          ],
           "params": [
             "velocity_curve"
           ]
         },
         "poly_aftertouch": {
           "name": "Poly Aftertouch",
+          "knobs": [
+            "poly_aftertouch_curve"
+          ],
           "params": [
             "poly_aftertouch_curve"
           ]
         },
         "voice": {
           "name": "Voice",
+          "knobs": [
+            "voice_mode",
+            "polyphony",
+            "unison",
+            "detune",
+            "spread",
+            "glide_ms"
+          ],
           "params": [
             "voice_mode",
             "polyphony",
@@ -486,7 +585,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "pitch_mod_env_amt",
@@ -494,7 +593,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "pitch_mod_cycle_env_amt",
@@ -502,7 +601,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "pitch_mod_random_amt",
@@ -510,7 +609,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "pitch_mod_velocity_amt",
@@ -518,7 +617,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "pitch_mod_poly_aftertouch_amt",
@@ -526,7 +625,7 @@
         "type": "float",
         "min": -48.0,
         "max": 48.0,
-        "step": 1.0
+        "step": 0.1
       },
       {
         "key": "harmonics_mod_lfo_amt",

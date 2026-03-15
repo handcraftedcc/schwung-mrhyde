@@ -6,7 +6,7 @@
 
 - Uses vendored upstream `plaits` + `stmlib` as synthesis core
 - Direct top-level Plaits params (`Pitch`, `Harmonics`, `Timbre`, `Morph`, `FM Amount`)
-- Single `Mod` submenu with pages for `Assign 1`, `Assign 2`, `Pitch`, `Harmonics`, `Timbre`, and `Cutoff`
+- Single `Mod` submenu with pages for `Pitch`, `Harmonics`, `Timbre`, `Cutoff`, `Assign 1`, and `Assign 2`
 - Full destination-based modulation sources:
   - LFO, Envelope, Cycling Envelope, Random, Velocity, Poly Aftertouch
 - Global multimode post filter submenu (`LP/BP/HP`, `Cutoff`, `Resonance`)

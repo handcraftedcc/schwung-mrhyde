@@ -114,6 +114,7 @@ expected_root_knobs = [
     "fm_amount",
     "lpg_decay",
     "lpg_color",
+    "filter_cutoff",
 ]
 if root_knobs != expected_root_knobs:
     fail(f"root knobs must be {expected_root_knobs}, got {root_knobs}")
@@ -121,7 +122,7 @@ if root_knobs != expected_root_knobs:
 mod_level = levels.get("mod", {})
 mod_entries = mod_level.get("params", [])
 mod_labels = [e.get("label") for e in mod_entries if isinstance(e, dict)]
-expected_mod_labels = ["Assign 1", "Assign 2", "Pitch", "Harmonics", "Timbre", "Cutoff"]
+expected_mod_labels = ["Pitch", "Harmonics", "Timbre", "Cutoff", "Assign 1", "Assign 2"]
 if mod_labels != expected_mod_labels:
     fail(f"mod submenu order must be {expected_mod_labels}, got {mod_labels}")
 
@@ -159,8 +160,8 @@ for src_key in sources:
     meta = chain_params.get(key, {})
     if meta.get("min") != -48.0 or meta.get("max") != 48.0:
         fail(f"{key} pitch modulation range should be -48..48")
-    if meta.get("step") != 1.0:
-        fail(f"{key} pitch modulation step should be 1.0")
+    if meta.get("step") != 0.1:
+        fail(f"{key} pitch modulation step should be 0.1")
 
 for dest in ["harmonics", "timbre", "cutoff", "assign1", "assign2"]:
     for src_key in sources:
@@ -226,10 +227,27 @@ filter_level = levels.get("filter", {})
 if filter_level.get("params") != ["filter_mode", "filter_cutoff", "filter_resonance"]:
     fail("filter level must expose mode, cutoff, resonance")
 
-for level_name, level in levels.items():
-    if level_name == "root":
-        continue
-    if isinstance(level, dict) and "knobs" in level:
-        fail(f"{level_name} should not define submenu knobs")
+expected_submenu_knobs = {
+    "filter": ["filter_mode", "filter_cutoff", "filter_resonance"],
+    "assign1_mod": ["assign1_target", "assign1_mod_lfo_amt", "assign1_mod_env_amt", "assign1_mod_cycle_env_amt", "assign1_mod_random_amt", "assign1_mod_velocity_amt", "assign1_mod_poly_aftertouch_amt"],
+    "assign2_mod": ["assign2_target", "assign2_mod_lfo_amt", "assign2_mod_env_amt", "assign2_mod_cycle_env_amt", "assign2_mod_random_amt", "assign2_mod_velocity_amt", "assign2_mod_poly_aftertouch_amt"],
+    "pitch_mod": ["pitch_mod_lfo_amt", "pitch_mod_env_amt", "pitch_mod_cycle_env_amt", "pitch_mod_random_amt", "pitch_mod_velocity_amt", "pitch_mod_poly_aftertouch_amt"],
+    "harmonics_mod": ["harmonics_mod_lfo_amt", "harmonics_mod_env_amt", "harmonics_mod_cycle_env_amt", "harmonics_mod_random_amt", "harmonics_mod_velocity_amt", "harmonics_mod_poly_aftertouch_amt"],
+    "timbre_mod": ["timbre_mod_lfo_amt", "timbre_mod_env_amt", "timbre_mod_cycle_env_amt", "timbre_mod_random_amt", "timbre_mod_velocity_amt", "timbre_mod_poly_aftertouch_amt"],
+    "cutoff_mod": ["cutoff_mod_lfo_amt", "cutoff_mod_env_amt", "cutoff_mod_cycle_env_amt", "cutoff_mod_random_amt", "cutoff_mod_velocity_amt", "cutoff_mod_poly_aftertouch_amt"],
+    "lfo": ["lfo_shape", "lfo_rate", "lfo_sync", "lfo_retrig", "lfo_phase"],
+    "envelope": ["env_attack_ms", "env_decay_ms", "env_sustain", "env_release_ms", "env_retrig"],
+    "cycle_env": ["cycle_attack_ms", "cycle_decay_ms", "cycle_shape", "cycle_sync", "cycle_retrig", "cycle_bipolar"],
+    "random": ["random_mode", "random_rate", "random_sync", "random_slew", "random_retrig"],
+    "velocity": ["velocity_curve"],
+    "poly_aftertouch": ["poly_aftertouch_curve"],
+    "voice": ["voice_mode", "polyphony", "unison", "detune", "spread", "glide_ms"],
+}
+
+for level_name, expected_knobs in expected_submenu_knobs.items():
+    level = levels.get(level_name, {})
+    knobs = level.get("knobs")
+    if knobs != expected_knobs:
+        fail(f"{level_name} knobs must be {expected_knobs}, got {knobs}")
 
 print("PASS: module metadata checks")
