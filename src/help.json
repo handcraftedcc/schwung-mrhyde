@@ -10,8 +10,8 @@
         "",
         "Core controls are",
         "top-level params",
-        "with destination",
-        "mod pages."
+        "with a single Mod",
+        "submenu."
       ]
     },
     {
@@ -34,10 +34,10 @@
         "response time",
         "Color: amp/filter",
         "balance",
-        "Pitch: semitone",
-        "offset at root",
-        "Color Mod: source",
-        "amount controls"
+        "long decay keeps",
+        "release tails",
+        "alive until fully",
+        "finished"
       ]
     },
     {
@@ -48,25 +48,25 @@
         "Mode: LP/BP/HP",
         "Cutoff: 0..1",
         "Resonance: amt",
-        "Sits above",
-        "Mod Sources menu",
-        "in root layout"
+        "sits above Mod",
+        "Sources in root",
+        "layout"
       ]
     },
     {
-      "title": "Modulation",
+      "title": "Mod",
       "lines": [
-        "Destinations:",
-        " Pitch/Harmonics/",
-        " Timbre/Morph/FM",
-        " Color",
+        "Pages:",
+        " Assign 1/2,",
+        " Pitch, Harmonics,",
+        " Timbre, Cutoff",
         "",
-        "Sources per dest:",
-        " LFO, Env, Cycle,",
-        " Random, Velocity,",
-        " Poly Aftertouch",
+        "Assign 1/2 include",
+        "target + source",
+        "amounts",
         "",
-        "Amount 0 = no-op."
+        "Active pages show",
+        "a '*' marker."
       ]
     },
     {
@@ -82,8 +82,6 @@
         " shape/bipolar",
         "Random: mode/rate/",
         " sync/slew/retrig",
-        " sync rate: 16 bars",
-        " .. 1/64",
         "Velocity curve",
         "Poly AT curve",
         "-1..+1 bipolar"
@@ -95,10 +93,11 @@
         "Voice Mode:",
         " mono/poly/legato",
         "Polyphony + Unison",
-        "are budgeted to",
-        "max 8 render voices",
+        "budgeted to max",
+        "8 render voices",
         "Detune + Spread",
-        "Glide time"
+        "Glide in 5ms",
+        "steps"
       ]
     },
     {

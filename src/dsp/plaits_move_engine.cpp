@@ -93,6 +93,19 @@ enum {
 };
 
 enum {
+    PPF_ASSIGN_NONE = 0,
+    PPF_ASSIGN_MORPH = 1,
+    PPF_ASSIGN_FM_AMOUNT = 2,
+    PPF_ASSIGN_LPG_DECAY = 3,
+    PPF_ASSIGN_LPG_COLOR = 4,
+    PPF_ASSIGN_FILTER_RESONANCE = 5,
+    PPF_ASSIGN_PITCH = 6,
+    PPF_ASSIGN_HARMONICS = 7,
+    PPF_ASSIGN_TIMBRE = 8,
+    PPF_ASSIGN_FILTER_CUTOFF = 9
+};
+
+enum {
     ENV_OFF = 0,
     ENV_ATTACK = 1,
     ENV_DECAY = 2,
@@ -327,6 +340,8 @@ void ppf_default_params(ppf_params_t *params) {
 
     params->lpg_decay = 0.35f;
     params->lpg_color = 0.55f;
+    params->assign1_target = PPF_ASSIGN_NONE;
+    params->assign2_target = PPF_ASSIGN_NONE;
 
     params->lfo_shape = PPF_LFO_SINE;
     params->lfo_rate = 2.0f;
@@ -505,6 +520,8 @@ void ppf_engine_t::set_params(const ppf_params_t &params) {
     params_.filter_resonance = clampf(params_.filter_resonance, 0.0f, 1.0f);
     params_.lpg_decay = clampf(params_.lpg_decay, 0.0f, 1.0f);
     params_.lpg_color = clampf(params_.lpg_color, 0.0f, 1.0f);
+    params_.assign1_target = clampi(params_.assign1_target, PPF_ASSIGN_NONE, PPF_ASSIGN_FILTER_CUTOFF);
+    params_.assign2_target = clampi(params_.assign2_target, PPF_ASSIGN_NONE, PPF_ASSIGN_FILTER_CUTOFF);
     params_.polyphony = clampi(params_.polyphony, 1, PPF_MAX_VOICES);
     params_.unison = clampi(params_.unison, 1, PPF_MAX_VOICES);
     params_.voice_mode = clampi(params_.voice_mode, 0, 2);
@@ -632,11 +649,6 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
     }
 
     int budget = impl_->active_voice_budget(params_);
-    FilterCoefficients filter_coeffs = make_filter_coefficients(
-        params_.filter_mode,
-        params_.filter_cutoff,
-        params_.filter_resonance);
-
     float lfo_rate = clampf(params_.lfo_rate, 0.01f, 40.0f);
     if (params_.lfo_sync) {
         lfo_rate = quantize_sync_rate_hz(lfo_rate, kSyncReferenceBpm);
@@ -660,6 +672,9 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
                              impl_->global_mod.lfo_rand_hold,
                              impl_->global_mod.lfo_rand_a,
                              impl_->global_mod.lfo_rand_b);
+        float cutoff_mod_sum = 0.0f;
+        float resonance_mod_sum = 0.0f;
+        int cutoff_mod_count = 0;
 
         for (int vi = 0; vi < budget; ++vi) {
             VoiceState &v = impl_->voices[vi];
@@ -776,27 +791,65 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             src.velocity = curve_pow(v.velocity, params_.velocity_curve);
             src.poly_aftertouch = ppf_apply_bipolar_curve(v.poly_aftertouch, params_.poly_aftertouch_curve);
 
-            ppf_mod_amounts_t pm = params_.pitch_mod;
-            ppf_mod_amounts_t hm = params_.harmonics_mod;
-            ppf_mod_amounts_t tm = params_.timbre_mod;
-            ppf_mod_amounts_t mm = params_.morph_mod;
-            ppf_mod_amounts_t fm = params_.fm_mod;
-            ppf_mod_amounts_t cm = params_.color_mod;
-
             float pitch = ppf_apply_destination_modulation(
-                params_.pitch, src, pm, -96.0f, 96.0f);
-
+                params_.pitch, src, params_.pitch_mod, -96.0f, 96.0f);
             float harmonics = ppf_apply_destination_modulation(
-                params_.harmonics, src, hm, 0.0f, 1.0f);
+                params_.harmonics, src, params_.harmonics_mod, 0.0f, 1.0f);
             float timbre = ppf_apply_destination_modulation(
-                params_.timbre, src, tm, 0.0f, 1.0f);
-            float morph = ppf_apply_destination_modulation(
-                params_.morph, src, mm, 0.0f, 1.0f);
-            float fm_amount = ppf_apply_destination_modulation(
-                params_.fm_amount, src, fm, 0.0f, 1.0f);
+                params_.timbre, src, params_.timbre_mod, 0.0f, 1.0f);
+            float morph = params_.morph;
+            float fm_amount = params_.fm_amount;
             float lpg = params_.lpg_decay;
-            float lpg_color = ppf_apply_destination_modulation(
-                params_.lpg_color, src, cm, 0.0f, 1.0f);
+            float lpg_color = params_.lpg_color;
+
+            cutoff_mod_sum += ppf_modulation_sum(src, params_.cutoff_mod);
+            ++cutoff_mod_count;
+
+            auto apply_assign_target = [&](int target, float amount) {
+                switch (target) {
+                    case PPF_ASSIGN_MORPH:
+                        morph += amount;
+                        break;
+                    case PPF_ASSIGN_FM_AMOUNT:
+                        fm_amount += amount;
+                        break;
+                    case PPF_ASSIGN_LPG_DECAY:
+                        lpg += amount;
+                        break;
+                    case PPF_ASSIGN_LPG_COLOR:
+                        lpg_color += amount;
+                        break;
+                    case PPF_ASSIGN_FILTER_RESONANCE:
+                        resonance_mod_sum += amount;
+                        break;
+                    case PPF_ASSIGN_PITCH:
+                        pitch += amount;
+                        break;
+                    case PPF_ASSIGN_HARMONICS:
+                        harmonics += amount;
+                        break;
+                    case PPF_ASSIGN_TIMBRE:
+                        timbre += amount;
+                        break;
+                    case PPF_ASSIGN_FILTER_CUTOFF:
+                        cutoff_mod_sum += amount;
+                        break;
+                    case PPF_ASSIGN_NONE:
+                    default:
+                        break;
+                }
+            };
+
+            apply_assign_target(params_.assign1_target, ppf_modulation_sum(src, params_.assign1_mod));
+            apply_assign_target(params_.assign2_target, ppf_modulation_sum(src, params_.assign2_mod));
+
+            pitch = clampf(pitch, -96.0f, 96.0f);
+            harmonics = clampf(harmonics, 0.0f, 1.0f);
+            timbre = clampf(timbre, 0.0f, 1.0f);
+            morph = clampf(morph, 0.0f, 1.0f);
+            fm_amount = clampf(fm_amount, 0.0f, 1.0f);
+            lpg = clampf(lpg, 0.0f, 1.0f);
+            lpg_color = clampf(lpg_color, 0.0f, 1.0f);
 
             plaits::Patch patch{};
             patch.note = v.note_current + pitch;
@@ -844,6 +897,20 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
                 v.trigger_blocks--;
             }
         }
+
+        float cutoff = params_.filter_cutoff;
+        float resonance = params_.filter_resonance;
+        if (cutoff_mod_count > 0) {
+            float inv_count = 1.0f / (float)cutoff_mod_count;
+            cutoff += cutoff_mod_sum * inv_count;
+            resonance += resonance_mod_sum * inv_count;
+        }
+        cutoff = clampf(cutoff, 0.0f, 1.0f);
+        resonance = clampf(resonance, 0.0f, 1.0f);
+        FilterCoefficients filter_coeffs = make_filter_coefficients(
+            params_.filter_mode,
+            cutoff,
+            resonance);
 
         for (int j = 0; j < chunk; ++j) {
             int idx = frame_pos + j;

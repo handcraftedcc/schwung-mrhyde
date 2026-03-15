@@ -5,12 +5,13 @@
 ## Highlights
 
 - Uses vendored upstream `plaits` + `stmlib` as synthesis core
-- Direct top-level Plaits params (`Pitch`, `Harmonics`, `Timbre`, `Morph`, `FM Amount`) with separate modulation submenus
+- Direct top-level Plaits params (`Pitch`, `Harmonics`, `Timbre`, `Morph`, `FM Amount`)
+- Single `Mod` submenu with pages for `Assign 1`, `Assign 2`, `Pitch`, `Harmonics`, `Timbre`, and `Cutoff`
 - Full destination-based modulation sources:
   - LFO, Envelope, Cycling Envelope, Random, Velocity, Poly Aftertouch
 - Global multimode post filter submenu (`LP/BP/HP`, `Cutoff`, `Resonance`)
 - Voice controls: mono/poly/mono legato, polyphony, unison, detune, spread, glide
-- Top-level LPG controls (`Decay`, `Color`) plus top-level `Pitch`, with dedicated `Pitch Mod` and `Color Mod`
+- Top-level LPG controls (`Decay`, `Color`) and active-mod page star indicators in UI
 
 ## Layout
 

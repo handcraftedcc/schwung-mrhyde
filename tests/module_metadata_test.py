@@ -36,6 +36,8 @@ required_keys = [
     "filter_resonance",
     "lpg_decay",
     "lpg_color",
+    "assign1_target",
+    "assign2_target",
     "voice_mode",
     "polyphony",
     "unison",
@@ -56,7 +58,14 @@ if not isinstance(model_opts, list) or len(model_opts) != 24:
 if "fm_2op" not in model_opts:
     fail("model enum options missing expected engine name 'fm_2op'")
 
-dests = ["pitch", "harmonics", "timbre", "morph", "fm", "color"]
+assign_target_opts = chain_params.get("assign1_target", {}).get("options", [])
+if len(assign_target_opts) != 10:
+    fail("assign target enum must expose 10 options")
+for option in ["off", "morph", "fm_amount", "lpg_decay", "lpg_color", "filter_resonance", "filter_cutoff"]:
+    if option not in assign_target_opts:
+        fail(f"assign target enum missing option: {option}")
+
+dests = ["pitch", "harmonics", "timbre", "cutoff", "assign1", "assign2"]
 sources = ["lfo", "env", "cycle_env", "random", "velocity", "poly_aftertouch"]
 for d in dests:
     for s in sources:
@@ -64,39 +73,41 @@ for d in dests:
         if key not in chain_params:
             fail(f"missing modulation amount key: {key}")
 
+for old_prefix in ["morph_mod_", "fm_mod_", "color_mod_"]:
+    for key in chain_params.keys():
+        if key.startswith(old_prefix):
+            fail(f"old modulation key should not exist: {key}")
+
 levels = cap.get("ui_hierarchy", {}).get("levels", {})
 root = levels.get("root", {})
 entries = root.get("params", [])
 
-if "timbre" not in entries:
-    fail("timbre must be direct root parameter")
-if "harmonics" not in entries:
-    fail("harmonics must be direct root parameter")
-if "morph" not in entries:
-    fail("morph must be direct root parameter")
-if "fm_amount" not in entries:
-    fail("fm_amount must be direct root parameter")
-if "pitch" not in entries:
-    fail("pitch must be direct root parameter")
-if "lpg_decay" not in entries or "lpg_color" not in entries:
-    fail("lpg_decay and lpg_color must be direct root parameters")
+for key in ["pitch", "harmonics", "timbre", "morph", "fm_amount", "lpg_decay", "lpg_color"]:
+    if key not in entries:
+        fail(f"{key} must be direct root parameter")
 
 labels = [e.get("label") for e in entries if isinstance(e, dict)]
-for label in ["Pitch Mod", "Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "Color Mod"]:
-    if label not in labels:
-        fail(f"missing root submenu: {label}")
+if "Mod" not in labels:
+    fail("missing root submenu: Mod")
 if "Filter" not in labels:
     fail("missing root submenu: Filter")
-if "LPG" in labels:
-    fail("LPG should not be a submenu")
+if "Mod Sources" not in labels:
+    fail("missing root submenu: Mod Sources")
+if "Voice" not in labels:
+    fail("missing root submenu: Voice")
 
-if labels.index("Filter") > labels.index("Mod Sources"):
-    fail("Filter submenu must appear above Mod Sources")
+for forbidden in ["Pitch Mod", "Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "Color Mod", "Macros", "Init / Randomize"]:
+    if forbidden in labels:
+        fail(f"forbidden root submenu present: {forbidden}")
+
+if labels.index("Filter") > labels.index("Mod"):
+    fail("Filter submenu must appear above Mod submenu")
+if labels.index("Mod") > labels.index("Mod Sources"):
+    fail("Mod submenu must appear above Mod Sources")
 
 root_knobs = root.get("knobs", [])
 expected_root_knobs = [
     "model",
-    "pitch",
     "harmonics",
     "timbre",
     "morph",
@@ -107,15 +118,25 @@ expected_root_knobs = [
 if root_knobs != expected_root_knobs:
     fail(f"root knobs must be {expected_root_knobs}, got {root_knobs}")
 
-for forbidden in ["Macros", "Init / Randomize", "LPG Mod"]:
-    if forbidden in labels:
-        fail(f"forbidden root submenu present: {forbidden}")
+mod_level = levels.get("mod", {})
+mod_entries = mod_level.get("params", [])
+mod_labels = [e.get("label") for e in mod_entries if isinstance(e, dict)]
+expected_mod_labels = ["Assign 1", "Assign 2", "Pitch", "Harmonics", "Timbre", "Cutoff"]
+if mod_labels != expected_mod_labels:
+    fail(f"mod submenu order must be {expected_mod_labels}, got {mod_labels}")
 
-level_names = set(levels.keys())
-forbidden_levels = ["macros", "init_randomize", "lpg_mod"]
-for forbidden_level in forbidden_levels:
-    if forbidden_level in level_names:
-        fail(f"forbidden level present: {forbidden_level}")
+expected_mod_level_params = {
+    "assign1_mod": ["assign1_target"] + [f"assign1_mod_{s}_amt" for s in sources],
+    "assign2_mod": ["assign2_target"] + [f"assign2_mod_{s}_amt" for s in sources],
+    "pitch_mod": [f"pitch_mod_{s}_amt" for s in sources],
+    "harmonics_mod": [f"harmonics_mod_{s}_amt" for s in sources],
+    "timbre_mod": [f"timbre_mod_{s}_amt" for s in sources],
+    "cutoff_mod": [f"cutoff_mod_{s}_amt" for s in sources],
+}
+for level_name, expected_params in expected_mod_level_params.items():
+    got = levels.get(level_name, {}).get("params", [])
+    if got != expected_params:
+        fail(f"{level_name} params mismatch, expected {expected_params}, got {got}")
 
 expected_mod_names = {
     "lfo": "LFO",
@@ -126,21 +147,27 @@ expected_mod_names = {
     "poly_aftertouch": "Poly Aftertouch",
 }
 
-for dest in dests:
+for dest in ["pitch", "harmonics", "timbre", "cutoff", "assign1", "assign2"]:
     for src_key, expected_name in expected_mod_names.items():
         key = f"{dest}_mod_{src_key}_amt"
         meta = chain_params.get(key, {})
-        name = meta.get("name")
-        if name != expected_name:
-            fail(f"{key} should have name '{expected_name}', got '{name}'")
-        if dest == "pitch":
-            if meta.get("min") != -48.0 or meta.get("max") != 48.0:
-                fail(f"{key} pitch modulation range should be -48..48")
-            if meta.get("step") != 1.0:
-                fail(f"{key} pitch modulation step should be 1.0")
-        if dest == "color":
-            if meta.get("min") != -1.0 or meta.get("max") != 1.0:
-                fail(f"{key} color modulation range should be -1..1")
+        if meta.get("name") != expected_name:
+            fail(f"{key} should have name '{expected_name}'")
+
+for src_key in sources:
+    key = f"pitch_mod_{src_key}_amt"
+    meta = chain_params.get(key, {})
+    if meta.get("min") != -48.0 or meta.get("max") != 48.0:
+        fail(f"{key} pitch modulation range should be -48..48")
+    if meta.get("step") != 1.0:
+        fail(f"{key} pitch modulation step should be 1.0")
+
+for dest in ["harmonics", "timbre", "cutoff", "assign1", "assign2"]:
+    for src_key in sources:
+        key = f"{dest}_mod_{src_key}_amt"
+        meta = chain_params.get(key, {})
+        if meta.get("min") != -1.0 or meta.get("max") != 1.0:
+            fail(f"{key} range should be -1..1")
 
 glide_meta = chain_params.get("glide_ms", {})
 if glide_meta.get("type") != "int":
@@ -185,8 +212,7 @@ if poly_at_level.get("params") != ["poly_aftertouch_curve"]:
 filter_mode_meta = chain_params.get("filter_mode", {})
 if filter_mode_meta.get("type") != "enum":
     fail("filter_mode must be enum")
-filter_mode_opts = filter_mode_meta.get("options", [])
-if set(filter_mode_opts) != {"lp", "bp", "hp"}:
+if set(filter_mode_meta.get("options", [])) != {"lp", "bp", "hp"}:
     fail("filter_mode enum must expose lp/bp/hp")
 
 for filter_key in ["filter_cutoff", "filter_resonance"]:
@@ -199,14 +225,6 @@ for filter_key in ["filter_cutoff", "filter_resonance"]:
 filter_level = levels.get("filter", {})
 if filter_level.get("params") != ["filter_mode", "filter_cutoff", "filter_resonance"]:
     fail("filter level must expose mode, cutoff, resonance")
-
-def level_param_keys(level_name: str):
-    level = levels.get(level_name, {})
-    out = []
-    for item in level.get("params", []):
-        if isinstance(item, str):
-            out.append(item)
-    return out
 
 for level_name, level in levels.items():
     if level_name == "root":

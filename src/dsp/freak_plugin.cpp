@@ -126,6 +126,18 @@ static const char *const kCycleShapeNames[] = {"linear", "exponential", "logarit
 static const char *const kRandomModeNames[] = {"sample_hold", "smooth", "drift"};
 static const char *const kVoiceModeNames[] = {"mono", "poly", "mono_legato"};
 static const char *const kFilterModeNames[] = {"lp", "bp", "hp"};
+static const char *const kAssignTargetNames[] = {
+    "off",
+    "morph",
+    "fm_amount",
+    "lpg_decay",
+    "lpg_color",
+    "filter_resonance",
+    "pitch",
+    "harmonics",
+    "timbre",
+    "filter_cutoff"
+};
 static const float kSyncReferenceBpm = 120.0f;
 static const char *const kSyncRateNames[] = {
     "16 bars",
@@ -234,6 +246,10 @@ static int write_enum_text(const char *key, int value, char *buf, int buf_len) {
     } else if (strcmp(key, "filter_mode") == 0) {
         names = kFilterModeNames;
         count = 3;
+    } else if (strcmp(key, "assign1_target") == 0 ||
+               strcmp(key, "assign2_target") == 0) {
+        names = kAssignTargetNames;
+        count = 10;
     } else if (strcmp(key, "lfo_sync") == 0 ||
                strcmp(key, "lfo_retrig") == 0 ||
                strcmp(key, "env_retrig") == 0 ||
@@ -356,6 +372,62 @@ static int get_param_from_module_json(const freak_instance_t *inst,
     return out;
 }
 
+static int has_active_mod_amounts(const ppf_mod_amounts_t &m) {
+    const float eps = 1e-6f;
+    return fabsf(m.lfo) > eps ||
+           fabsf(m.env) > eps ||
+           fabsf(m.cycle_env) > eps ||
+           fabsf(m.random) > eps ||
+           fabsf(m.velocity) > eps ||
+           fabsf(m.poly_aftertouch) > eps;
+}
+
+static int append_star_to_label(char *json, int cap, const char *label, int active) {
+    if (!json || cap <= 0 || !label || !active) return 0;
+    char needle_compact[128];
+    char needle_spaced[128];
+    snprintf(needle_compact, sizeof(needle_compact), "\"label\":\"%s\"", label);
+    snprintf(needle_spaced, sizeof(needle_spaced), "\"label\": \"%s\"", label);
+
+    const char *needle = needle_compact;
+    char *pos = strstr(json, needle_compact);
+    if (!pos) {
+        pos = strstr(json, needle_spaced);
+        needle = needle_spaced;
+    }
+    if (!pos) return 0;
+
+    char *insert = pos + (int)strlen(needle) - 1;
+    size_t len = strlen(json);
+    size_t index = (size_t)(insert - json);
+    if (len + 1 >= (size_t)cap) return -1;
+
+    memmove(insert + 1, insert, len - index + 1);
+    *insert = '*';
+    return 1;
+}
+
+static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *buf, int buf_len) {
+    int rc = get_param_from_module_json(inst, "ui_hierarchy", '{', '}', buf, buf_len);
+    if (rc < 0) return rc;
+
+    int assign1_active = inst->params.assign1_target != 0 && has_active_mod_amounts(inst->params.assign1_mod);
+    int assign2_active = inst->params.assign2_target != 0 && has_active_mod_amounts(inst->params.assign2_mod);
+    int pitch_active = has_active_mod_amounts(inst->params.pitch_mod);
+    int harmonics_active = has_active_mod_amounts(inst->params.harmonics_mod);
+    int timbre_active = has_active_mod_amounts(inst->params.timbre_mod);
+    int cutoff_active = has_active_mod_amounts(inst->params.cutoff_mod);
+
+    if (append_star_to_label(buf, buf_len, "Assign 1", assign1_active) < 0) return -1;
+    if (append_star_to_label(buf, buf_len, "Assign 2", assign2_active) < 0) return -1;
+    if (append_star_to_label(buf, buf_len, "Pitch", pitch_active) < 0) return -1;
+    if (append_star_to_label(buf, buf_len, "Harmonics", harmonics_active) < 0) return -1;
+    if (append_star_to_label(buf, buf_len, "Timbre", timbre_active) < 0) return -1;
+    if (append_star_to_label(buf, buf_len, "Cutoff", cutoff_active) < 0) return -1;
+
+    return (int)strlen(buf);
+}
+
 #define SET_FLOAT_FIELD(NAME, FIELD, LO, HI) \
     if (strcmp(key, NAME) == 0) { \
         inst->params.FIELD = clampf(fv, LO, HI); \
@@ -421,6 +493,16 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
         if (strcmp(key, "filter_mode") == 0) {
             if (!parse_enum_or_int(val, kFilterModeNames, 3, &iv)) return 0;
             inst->params.filter_mode = clampi(iv, 0, 2);
+            return 1;
+        }
+        if (strcmp(key, "assign1_target") == 0) {
+            if (!parse_enum_or_int(val, kAssignTargetNames, 10, &iv)) return 0;
+            inst->params.assign1_target = clampi(iv, 0, 9);
+            return 1;
+        }
+        if (strcmp(key, "assign2_target") == 0) {
+            if (!parse_enum_or_int(val, kAssignTargetNames, 10, &iv)) return 0;
+            inst->params.assign2_target = clampi(iv, 0, 9);
             return 1;
         }
         if (strcmp(key, "lfo_rate") == 0) {
@@ -510,26 +592,28 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_FLOAT_FIELD("timbre_mod_velocity_amt", timbre_mod.velocity, -1.0f, 1.0f);
     SET_FLOAT_FIELD("timbre_mod_poly_aftertouch_amt", timbre_mod.poly_aftertouch, -1.0f, 1.0f);
 
-    SET_FLOAT_FIELD("morph_mod_lfo_amt", morph_mod.lfo, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("morph_mod_env_amt", morph_mod.env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("morph_mod_cycle_env_amt", morph_mod.cycle_env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("morph_mod_random_amt", morph_mod.random, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("morph_mod_velocity_amt", morph_mod.velocity, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("morph_mod_poly_aftertouch_amt", morph_mod.poly_aftertouch, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_lfo_amt", cutoff_mod.lfo, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_env_amt", cutoff_mod.env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_cycle_env_amt", cutoff_mod.cycle_env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_random_amt", cutoff_mod.random, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_velocity_amt", cutoff_mod.velocity, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("cutoff_mod_poly_aftertouch_amt", cutoff_mod.poly_aftertouch, -1.0f, 1.0f);
 
-    SET_FLOAT_FIELD("fm_mod_lfo_amt", fm_mod.lfo, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("fm_mod_env_amt", fm_mod.env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("fm_mod_cycle_env_amt", fm_mod.cycle_env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("fm_mod_random_amt", fm_mod.random, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("fm_mod_velocity_amt", fm_mod.velocity, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("fm_mod_poly_aftertouch_amt", fm_mod.poly_aftertouch, -1.0f, 1.0f);
+    SET_INT_FIELD("assign1_target", assign1_target, 0, 9);
+    SET_FLOAT_FIELD("assign1_mod_lfo_amt", assign1_mod.lfo, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign1_mod_env_amt", assign1_mod.env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign1_mod_cycle_env_amt", assign1_mod.cycle_env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign1_mod_random_amt", assign1_mod.random, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign1_mod_velocity_amt", assign1_mod.velocity, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign1_mod_poly_aftertouch_amt", assign1_mod.poly_aftertouch, -1.0f, 1.0f);
 
-    SET_FLOAT_FIELD("color_mod_lfo_amt", color_mod.lfo, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("color_mod_env_amt", color_mod.env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("color_mod_cycle_env_amt", color_mod.cycle_env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("color_mod_random_amt", color_mod.random, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("color_mod_velocity_amt", color_mod.velocity, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("color_mod_poly_aftertouch_amt", color_mod.poly_aftertouch, -1.0f, 1.0f);
+    SET_INT_FIELD("assign2_target", assign2_target, 0, 9);
+    SET_FLOAT_FIELD("assign2_mod_lfo_amt", assign2_mod.lfo, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign2_mod_env_amt", assign2_mod.env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign2_mod_cycle_env_amt", assign2_mod.cycle_env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign2_mod_random_amt", assign2_mod.random, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign2_mod_velocity_amt", assign2_mod.velocity, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("assign2_mod_poly_aftertouch_amt", assign2_mod.poly_aftertouch, -1.0f, 1.0f);
 
     SET_INT_FIELD("lfo_shape", lfo_shape, 0, 5);
     if (strcmp(key, "lfo_rate") == 0) {
@@ -627,26 +711,28 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
     GET_FLOAT_FIELD("timbre_mod_velocity_amt", timbre_mod.velocity);
     GET_FLOAT_FIELD("timbre_mod_poly_aftertouch_amt", timbre_mod.poly_aftertouch);
 
-    GET_FLOAT_FIELD("morph_mod_lfo_amt", morph_mod.lfo);
-    GET_FLOAT_FIELD("morph_mod_env_amt", morph_mod.env);
-    GET_FLOAT_FIELD("morph_mod_cycle_env_amt", morph_mod.cycle_env);
-    GET_FLOAT_FIELD("morph_mod_random_amt", morph_mod.random);
-    GET_FLOAT_FIELD("morph_mod_velocity_amt", morph_mod.velocity);
-    GET_FLOAT_FIELD("morph_mod_poly_aftertouch_amt", morph_mod.poly_aftertouch);
+    GET_FLOAT_FIELD("cutoff_mod_lfo_amt", cutoff_mod.lfo);
+    GET_FLOAT_FIELD("cutoff_mod_env_amt", cutoff_mod.env);
+    GET_FLOAT_FIELD("cutoff_mod_cycle_env_amt", cutoff_mod.cycle_env);
+    GET_FLOAT_FIELD("cutoff_mod_random_amt", cutoff_mod.random);
+    GET_FLOAT_FIELD("cutoff_mod_velocity_amt", cutoff_mod.velocity);
+    GET_FLOAT_FIELD("cutoff_mod_poly_aftertouch_amt", cutoff_mod.poly_aftertouch);
 
-    GET_FLOAT_FIELD("fm_mod_lfo_amt", fm_mod.lfo);
-    GET_FLOAT_FIELD("fm_mod_env_amt", fm_mod.env);
-    GET_FLOAT_FIELD("fm_mod_cycle_env_amt", fm_mod.cycle_env);
-    GET_FLOAT_FIELD("fm_mod_random_amt", fm_mod.random);
-    GET_FLOAT_FIELD("fm_mod_velocity_amt", fm_mod.velocity);
-    GET_FLOAT_FIELD("fm_mod_poly_aftertouch_amt", fm_mod.poly_aftertouch);
+    GET_ENUM_FIELD("assign1_target", assign1_target);
+    GET_FLOAT_FIELD("assign1_mod_lfo_amt", assign1_mod.lfo);
+    GET_FLOAT_FIELD("assign1_mod_env_amt", assign1_mod.env);
+    GET_FLOAT_FIELD("assign1_mod_cycle_env_amt", assign1_mod.cycle_env);
+    GET_FLOAT_FIELD("assign1_mod_random_amt", assign1_mod.random);
+    GET_FLOAT_FIELD("assign1_mod_velocity_amt", assign1_mod.velocity);
+    GET_FLOAT_FIELD("assign1_mod_poly_aftertouch_amt", assign1_mod.poly_aftertouch);
 
-    GET_FLOAT_FIELD("color_mod_lfo_amt", color_mod.lfo);
-    GET_FLOAT_FIELD("color_mod_env_amt", color_mod.env);
-    GET_FLOAT_FIELD("color_mod_cycle_env_amt", color_mod.cycle_env);
-    GET_FLOAT_FIELD("color_mod_random_amt", color_mod.random);
-    GET_FLOAT_FIELD("color_mod_velocity_amt", color_mod.velocity);
-    GET_FLOAT_FIELD("color_mod_poly_aftertouch_amt", color_mod.poly_aftertouch);
+    GET_ENUM_FIELD("assign2_target", assign2_target);
+    GET_FLOAT_FIELD("assign2_mod_lfo_amt", assign2_mod.lfo);
+    GET_FLOAT_FIELD("assign2_mod_env_amt", assign2_mod.env);
+    GET_FLOAT_FIELD("assign2_mod_cycle_env_amt", assign2_mod.cycle_env);
+    GET_FLOAT_FIELD("assign2_mod_random_amt", assign2_mod.random);
+    GET_FLOAT_FIELD("assign2_mod_velocity_amt", assign2_mod.velocity);
+    GET_FLOAT_FIELD("assign2_mod_poly_aftertouch_amt", assign2_mod.poly_aftertouch);
 
     GET_ENUM_FIELD("lfo_shape", lfo_shape);
     if (strcmp(key, "lfo_rate") == 0) {
@@ -757,7 +843,7 @@ static int get_param(void *instance, const char *key, char *buf, int buf_len) {
     freak_instance_t *inst = (freak_instance_t *)instance;
     if (!inst || !key || !buf || buf_len <= 0) return -1;
     if (strcmp(key, "ui_hierarchy") == 0) {
-        return get_param_from_module_json(inst, "ui_hierarchy", '{', '}', buf, buf_len);
+        return get_ui_hierarchy_with_mod_stars(inst, buf, buf_len);
     }
     if (strcmp(key, "chain_params") == 0) {
         return get_param_from_module_json(inst, "chain_params", '[', ']', buf, buf_len);

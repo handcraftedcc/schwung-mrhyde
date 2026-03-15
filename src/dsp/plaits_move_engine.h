@@ -51,6 +51,18 @@ static inline float ppf_apply_destination_modulation(float base_value,
     return ppf_clampf(v, min_value, max_value);
 }
 
+static inline float ppf_modulation_sum(const ppf_mod_sources_t sources,
+                                       const ppf_mod_amounts_t amounts) {
+    float v = 0.0f;
+    v += sources.lfo * amounts.lfo;
+    v += sources.env * amounts.env;
+    v += sources.cycle_env * amounts.cycle_env;
+    v += sources.random * amounts.random;
+    v += sources.velocity * amounts.velocity;
+    v += sources.poly_aftertouch * amounts.poly_aftertouch;
+    return v;
+}
+
 static inline float ppf_apply_bipolar_curve(float x, float curve) {
     x = ppf_clampf(x, 0.0f, 1.0f);
     float c = ppf_clampf(curve, -1.0f, 1.0f);
@@ -82,9 +94,11 @@ typedef struct {
     ppf_mod_amounts_t pitch_mod;
     ppf_mod_amounts_t harmonics_mod;
     ppf_mod_amounts_t timbre_mod;
-    ppf_mod_amounts_t morph_mod;
-    ppf_mod_amounts_t fm_mod;
-    ppf_mod_amounts_t color_mod;
+    ppf_mod_amounts_t cutoff_mod;
+    int assign1_target;
+    ppf_mod_amounts_t assign1_mod;
+    int assign2_target;
+    ppf_mod_amounts_t assign2_mod;
 
     int lfo_shape;
     float lfo_rate;

@@ -42,6 +42,15 @@ static int has_nonzero_audio(const int16_t *audio, int n) {
     return 0;
 }
 
+static int has_json_label(const char *json, const char *label_text) {
+    if (!json || !label_text) return 0;
+    char compact[128];
+    char spaced[128];
+    snprintf(compact, sizeof(compact), "\"label\":\"%s\"", label_text);
+    snprintf(spaced, sizeof(spaced), "\"label\": \"%s\"", label_text);
+    return strstr(json, compact) != NULL || strstr(json, spaced) != NULL;
+}
+
 int main() {
     plugin_api_v2_t *api = move_plugin_init_v2(NULL);
     if (!api) fail("move_plugin_init_v2 returned null");
@@ -64,7 +73,9 @@ int main() {
     api->set_param(inst, "filter_resonance", "0.61");
     api->set_param(inst, "glide_ms", "127");
     api->set_param(inst, "pitch_mod_lfo_amt", "12");
-    api->set_param(inst, "color_mod_lfo_amt", "0.5");
+    api->set_param(inst, "cutoff_mod_lfo_amt", "0.5");
+    api->set_param(inst, "assign1_target", "morph");
+    api->set_param(inst, "assign1_mod_env_amt", "0.2");
     api->set_param(inst, "env_attack_ms", "123.7");
     api->set_param(inst, "cycle_attack_ms", "0");
 
@@ -143,13 +154,22 @@ int main() {
         fail("pitch_mod_lfo_amt should support wider pitch range values");
     }
 
-    char color_mod_buf[32];
-    memset(color_mod_buf, 0, sizeof(color_mod_buf));
-    if (api->get_param(inst, "color_mod_lfo_amt", color_mod_buf, (int)sizeof(color_mod_buf)) < 0) {
-        fail("get_param(color_mod_lfo_amt) failed");
+    char cutoff_mod_buf[32];
+    memset(cutoff_mod_buf, 0, sizeof(cutoff_mod_buf));
+    if (api->get_param(inst, "cutoff_mod_lfo_amt", cutoff_mod_buf, (int)sizeof(cutoff_mod_buf)) < 0) {
+        fail("get_param(cutoff_mod_lfo_amt) failed");
     }
-    if (strcmp(color_mod_buf, "0.5") != 0) {
-        fail("color_mod_lfo_amt should roundtrip as float amount");
+    if (strcmp(cutoff_mod_buf, "0.5") != 0) {
+        fail("cutoff_mod_lfo_amt should roundtrip as float amount");
+    }
+
+    char assign_target_buf[32];
+    memset(assign_target_buf, 0, sizeof(assign_target_buf));
+    if (api->get_param(inst, "assign1_target", assign_target_buf, (int)sizeof(assign_target_buf)) < 0) {
+        fail("get_param(assign1_target) failed");
+    }
+    if (strcmp(assign_target_buf, "morph") != 0) {
+        fail("assign1_target should return enum text");
     }
 
     char attack_buf[32];
@@ -197,6 +217,15 @@ int main() {
     }
     if (hierarchy_buf[0] != '{') {
         fail("ui_hierarchy should be a JSON object");
+    }
+    if (!has_json_label(hierarchy_buf, "Assign 1*")) {
+        fail("ui_hierarchy should mark active assign modulation page with star");
+    }
+    if (!has_json_label(hierarchy_buf, "Cutoff*")) {
+        fail("ui_hierarchy should mark active cutoff modulation page with star");
+    }
+    if (has_json_label(hierarchy_buf, "Assign 2*")) {
+        fail("ui_hierarchy should not mark inactive assign2 page");
     }
 
     char chain_params_buf[16384];
