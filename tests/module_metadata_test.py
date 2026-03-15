@@ -53,7 +53,7 @@ if not isinstance(model_opts, list) or len(model_opts) != 24:
 if "fm_2op" not in model_opts:
     fail("model enum options missing expected engine name 'fm_2op'")
 
-dests = ["pitch", "harmonics", "timbre", "morph", "fm"]
+dests = ["pitch", "harmonics", "timbre", "morph", "fm", "color"]
 sources = ["lfo", "env", "cycle_env", "random", "velocity", "poly_aftertouch"]
 for d in dests:
     for s in sources:
@@ -73,15 +73,17 @@ if "morph" not in entries:
     fail("morph must be direct root parameter")
 if "fm_amount" not in entries:
     fail("fm_amount must be direct root parameter")
-if "pitch" in entries:
-    fail("pitch should be nested under LPG")
+if "pitch" not in entries:
+    fail("pitch must be direct root parameter")
+if "lpg_decay" not in entries or "lpg_color" not in entries:
+    fail("lpg_decay and lpg_color must be direct root parameters")
 
 labels = [e.get("label") for e in entries if isinstance(e, dict)]
-for label in ["Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "LPG"]:
+for label in ["Pitch Mod", "Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "Color Mod"]:
     if label not in labels:
         fail(f"missing root submenu: {label}")
-if "Pitch Mod" in labels:
-    fail("Pitch Mod should be nested under LPG")
+if "LPG" in labels:
+    fail("LPG should not be a submenu")
 
 root_knobs = root.get("knobs", [])
 expected_root_knobs = [
@@ -127,6 +129,9 @@ for dest in dests:
                 fail(f"{key} pitch modulation range should be -48..48")
             if meta.get("step") != 1.0:
                 fail(f"{key} pitch modulation step should be 1.0")
+        if dest == "color":
+            if meta.get("min") != -1.0 or meta.get("max") != 1.0:
+                fail(f"{key} color modulation range should be -1..1")
 
 glide_meta = chain_params.get("glide_ms", {})
 if glide_meta.get("type") != "int":
@@ -156,12 +161,32 @@ random_rate_meta = chain_params.get("random_rate", {})
 if random_rate_meta.get("type") != "float":
     fail("random_rate type must stay float for continuous unsynced use")
 
-lpg_level = levels.get("lpg", {})
-lpg_params = lpg_level.get("params", [])
-if "pitch" not in lpg_params:
-    fail("pitch must appear in LPG submenu")
-pitch_mod_in_lpg = any(isinstance(e, dict) and e.get("label") == "Pitch Mod" and e.get("level") == "pitch_mod" for e in lpg_params)
-if not pitch_mod_in_lpg:
-    fail("Pitch Mod submenu must be inside LPG submenu")
+def level_param_keys(level_name: str):
+    level = levels.get(level_name, {})
+    out = []
+    for item in level.get("params", []):
+        if isinstance(item, str):
+            out.append(item)
+    return out
+
+for level_name in [
+    "pitch_mod",
+    "harmonics_mod",
+    "timbre_mod",
+    "morph_mod",
+    "fm_mod",
+    "color_mod",
+    "lfo",
+    "envelope",
+    "cycle_env",
+    "random",
+    "velocity",
+    "poly_aftertouch",
+    "voice",
+]:
+    expected = level_param_keys(level_name)
+    knobs = levels.get(level_name, {}).get("knobs", [])
+    if knobs != expected:
+        fail(f"{level_name} knobs should follow param order")
 
 print("PASS: module metadata checks")

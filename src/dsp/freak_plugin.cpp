@@ -512,6 +512,13 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_FLOAT_FIELD("fm_mod_velocity_amt", fm_mod.velocity, -1.0f, 1.0f);
     SET_FLOAT_FIELD("fm_mod_poly_aftertouch_amt", fm_mod.poly_aftertouch, -1.0f, 1.0f);
 
+    SET_FLOAT_FIELD("color_mod_lfo_amt", color_mod.lfo, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("color_mod_env_amt", color_mod.env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("color_mod_cycle_env_amt", color_mod.cycle_env, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("color_mod_random_amt", color_mod.random, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("color_mod_velocity_amt", color_mod.velocity, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("color_mod_poly_aftertouch_amt", color_mod.poly_aftertouch, -1.0f, 1.0f);
+
     SET_INT_FIELD("lfo_shape", lfo_shape, 0, 5);
     if (strcmp(key, "lfo_rate") == 0) {
         float rate = clampf(fv, 0.01f, 40.0f);
@@ -619,6 +626,13 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
     GET_FLOAT_FIELD("fm_mod_random_amt", fm_mod.random);
     GET_FLOAT_FIELD("fm_mod_velocity_amt", fm_mod.velocity);
     GET_FLOAT_FIELD("fm_mod_poly_aftertouch_amt", fm_mod.poly_aftertouch);
+
+    GET_FLOAT_FIELD("color_mod_lfo_amt", color_mod.lfo);
+    GET_FLOAT_FIELD("color_mod_env_amt", color_mod.env);
+    GET_FLOAT_FIELD("color_mod_cycle_env_amt", color_mod.cycle_env);
+    GET_FLOAT_FIELD("color_mod_random_amt", color_mod.random);
+    GET_FLOAT_FIELD("color_mod_velocity_amt", color_mod.velocity);
+    GET_FLOAT_FIELD("color_mod_poly_aftertouch_amt", color_mod.poly_aftertouch);
 
     GET_ENUM_FIELD("lfo_shape", lfo_shape);
     if (strcmp(key, "lfo_rate") == 0) {

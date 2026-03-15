@@ -66,6 +66,7 @@ typedef struct {
     ppf_mod_amounts_t timbre_mod;
     ppf_mod_amounts_t morph_mod;
     ppf_mod_amounts_t fm_mod;
+    ppf_mod_amounts_t color_mod;
 
     int lfo_shape;
     float lfo_rate;

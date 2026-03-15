@@ -45,10 +45,10 @@ int main() {
     params.voice_mode = 1;  // poly
     params.polyphony = 4;
     params.unison = 1;
-    params.env_attack_ms = 0.0f;
-    params.env_decay_ms = 0.0f;
+    params.env_attack_ms = 0;
+    params.env_decay_ms = 0;
     params.env_sustain = 0.0f;
-    params.env_release_ms = 5.0f;
+    params.env_release_ms = 5;
     engine.set_params(params);
 
     engine.note_on(60, 1.0f);
@@ -81,15 +81,20 @@ int main() {
     held_params.voice_mode = 1;  // poly
     held_params.polyphony = 4;
     held_params.unison = 1;
+    held_params.lpg_decay = 1.0f;
     held_engine.set_params(held_params);
     held_engine.note_on(64, 1.0f);
     render_some(held_engine, PPF_SAMPLE_RATE * 2, 128);
     held_engine.note_off(64);
+    float early_release_peak = render_peak(held_engine, 2048, 128);
+    if (early_release_peak < 1e-5f) {
+        fail("held note release should keep audible tail until release completes");
+    }
     render_some(held_engine, 128, 128);
     if (held_engine.debug_active_voice_count() == 0) {
         fail("held note release should not hard-cut immediately");
     }
-    render_some(held_engine, 32768, 128);
+    render_some(held_engine, 98304, 128);
     if (held_engine.debug_active_voice_count() != 0) {
         fail("held note release should eventually finish");
     }

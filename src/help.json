@@ -34,8 +34,8 @@
         "response time",
         "Color: amp/filter",
         "balance",
-        "Pitch + Pitch Mod",
-        "are nested here"
+        "Color Mod: source",
+        "amount controls"
       ]
     },
     {
@@ -44,6 +44,7 @@
         "Destinations:",
         " Pitch/Harmonics/",
         " Timbre/Morph/FM",
+        " Color",
         "",
         "Sources per dest:",
         " LFO, Env, Cycle,",

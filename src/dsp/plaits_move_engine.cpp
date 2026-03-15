@@ -183,6 +183,7 @@ struct VoiceState {
     uint32_t age;
     int trigger_blocks;
     int release_samples_remaining;
+    int release_samples_total;
 
     int env_stage;
     float env_value;
@@ -282,6 +283,7 @@ struct ppf_engine_t::Impl {
             v.age = 0;
             v.trigger_blocks = 0;
             v.release_samples_remaining = 0;
+            v.release_samples_total = 0;
             v.allocator.Init(v.ram, sizeof(v.ram));
             v.synth.Init(&v.allocator);
             v.env_stage = ENV_OFF;
@@ -334,6 +336,7 @@ struct ppf_engine_t::Impl {
         v.pan = clampf(pan, -1.0f, 1.0f);
         v.trigger_blocks = kMaxTriggerBlocks;
         v.release_samples_remaining = 0;
+        v.release_samples_total = 0;
 
         if (retrig_env || v.env_stage == ENV_OFF) {
             v.env_stage = ENV_ATTACK;
@@ -351,6 +354,7 @@ struct ppf_engine_t::Impl {
             if (v.note == note) {
                 v.gate = false;
                 v.release_samples_remaining = release_samples;
+                v.release_samples_total = release_samples;
                 if (v.env_stage != ENV_OFF) {
                     v.env_stage = ENV_RELEASE;
                 }
@@ -510,6 +514,7 @@ void ppf_engine_t::all_notes_off() {
     for (int i = 0; i < budget; ++i) {
         impl_->voices[i].gate = false;
         impl_->voices[i].release_samples_remaining = release_samples;
+        impl_->voices[i].release_samples_total = release_samples;
         impl_->voices[i].env_stage = ENV_RELEASE;
     }
 }
@@ -666,6 +671,7 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             ppf_mod_amounts_t tm = params_.timbre_mod;
             ppf_mod_amounts_t mm = params_.morph_mod;
             ppf_mod_amounts_t fm = params_.fm_mod;
+            ppf_mod_amounts_t cm = params_.color_mod;
 
             float pitch = ppf_apply_destination_modulation(
                 params_.pitch, src, pm, -96.0f, 96.0f);
@@ -679,7 +685,8 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             float fm_amount = ppf_apply_destination_modulation(
                 params_.fm_amount, src, fm, 0.0f, 1.0f);
             float lpg = params_.lpg_decay;
-            float lpg_color = params_.lpg_color;
+            float lpg_color = ppf_apply_destination_modulation(
+                params_.lpg_color, src, cm, 0.0f, 1.0f);
 
             plaits::Patch patch{};
             patch.note = v.note_current + pitch;
@@ -700,8 +707,12 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             mods.harmonics = 0.0f;
             mods.timbre = 0.0f;
             mods.morph = 0.0f;
-            mods.trigger = v.gate ? 1.0f : 0.0f;
-            mods.level = v.gate ? clampf(v.velocity, 0.0f, 1.0f) : 0.0f;
+            float release_level = v.gate ? 1.0f : 0.0f;
+            if (!v.gate && v.release_samples_total > 0) {
+                release_level = clampf((float)v.release_samples_remaining / (float)v.release_samples_total, 0.0f, 1.0f);
+            }
+            mods.trigger = (v.trigger_blocks > 0) ? 1.0f : 0.0f;
+            mods.level = clampf(v.velocity, 0.0f, 1.0f) * release_level;
             mods.frequency_patched = false;
             mods.timbre_patched = false;
             mods.morph_patched = false;

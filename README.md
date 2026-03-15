@@ -9,7 +9,7 @@
 - Full destination-based modulation sources:
   - LFO, Envelope, Cycling Envelope, Random, Velocity, Poly Aftertouch
 - Voice controls: mono/poly/mono legato, polyphony, unison, detune, spread, glide
-- LPG controls (`Decay`, `Color`) plus nested pitch controls (`Pitch`, `Pitch Mod`)
+- Top-level LPG controls (`Decay`, `Color`) with dedicated `Color Mod`
 
 ## Layout
 

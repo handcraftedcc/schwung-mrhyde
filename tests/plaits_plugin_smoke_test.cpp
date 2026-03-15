@@ -61,6 +61,7 @@ int main() {
     api->set_param(inst, "lfo_shape", "saw");
     api->set_param(inst, "glide_ms", "127");
     api->set_param(inst, "pitch_mod_lfo_amt", "12");
+    api->set_param(inst, "color_mod_lfo_amt", "0.5");
     api->set_param(inst, "env_attack_ms", "123.7");
     api->set_param(inst, "cycle_attack_ms", "0");
 
@@ -113,6 +114,15 @@ int main() {
         fail("pitch_mod_lfo_amt should support wider pitch range values");
     }
 
+    char color_mod_buf[32];
+    memset(color_mod_buf, 0, sizeof(color_mod_buf));
+    if (api->get_param(inst, "color_mod_lfo_amt", color_mod_buf, (int)sizeof(color_mod_buf)) < 0) {
+        fail("get_param(color_mod_lfo_amt) failed");
+    }
+    if (strcmp(color_mod_buf, "0.5") != 0) {
+        fail("color_mod_lfo_amt should roundtrip as float amount");
+    }
+
     char attack_buf[32];
     memset(attack_buf, 0, sizeof(attack_buf));
     if (api->get_param(inst, "env_attack_ms", attack_buf, (int)sizeof(attack_buf)) < 0) {
@@ -160,7 +170,7 @@ int main() {
         fail("ui_hierarchy should be a JSON object");
     }
 
-    char chain_params_buf[8192];
+    char chain_params_buf[16384];
     memset(chain_params_buf, 0, sizeof(chain_params_buf));
     if (api->get_param(inst, "chain_params", chain_params_buf, (int)sizeof(chain_params_buf)) <= 0) {
         fail("chain_params get_param returned empty");
