@@ -73,25 +73,28 @@ if "morph" not in entries:
     fail("morph must be direct root parameter")
 if "fm_amount" not in entries:
     fail("fm_amount must be direct root parameter")
-if "pitch" in entries:
-    fail("pitch should be nested under LPG")
-if "lpg_decay" in entries or "lpg_color" in entries:
-    fail("lpg_decay and lpg_color should be nested under LPG")
+if "pitch" not in entries:
+    fail("pitch must be direct root parameter")
+if "lpg_decay" not in entries or "lpg_color" not in entries:
+    fail("lpg_decay and lpg_color must be direct root parameters")
 
 labels = [e.get("label") for e in entries if isinstance(e, dict)]
-for label in ["Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "LPG"]:
+for label in ["Pitch Mod", "Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "Color Mod"]:
     if label not in labels:
         fail(f"missing root submenu: {label}")
-if "Pitch Mod" in labels or "Color Mod" in labels:
-    fail("Pitch Mod and Color Mod should be nested under LPG")
+if "LPG" in labels:
+    fail("LPG should not be a submenu")
 
 root_knobs = root.get("knobs", [])
 expected_root_knobs = [
     "model",
+    "pitch",
     "harmonics",
     "timbre",
     "morph",
-    "fm_amount"
+    "fm_amount",
+    "lpg_decay",
+    "lpg_color",
 ]
 if root_knobs != expected_root_knobs:
     fail(f"root knobs must be {expected_root_knobs}, got {root_knobs}")
@@ -167,28 +170,10 @@ def level_param_keys(level_name: str):
             out.append(item)
     return out
 
-for level_name in [
-    "pitch_mod",
-    "harmonics_mod",
-    "timbre_mod",
-    "morph_mod",
-    "fm_mod",
-    "color_mod",
-]:
-    expected = level_param_keys(level_name)
-    knobs = levels.get(level_name, {}).get("knobs", [])
-    if knobs != expected:
-        fail(f"{level_name} knobs should follow param order")
-
-lpg_level = levels.get("lpg", {})
-lpg_params = lpg_level.get("params", [])
-if "pitch" not in lpg_params:
-    fail("pitch must appear in LPG submenu")
-pitch_mod_in_lpg = any(isinstance(e, dict) and e.get("label") == "Pitch Mod" and e.get("level") == "pitch_mod" for e in lpg_params)
-if not pitch_mod_in_lpg:
-    fail("Pitch Mod submenu must be inside LPG submenu")
-color_mod_in_lpg = any(isinstance(e, dict) and e.get("label") == "Color Mod" and e.get("level") == "color_mod" for e in lpg_params)
-if not color_mod_in_lpg:
-    fail("Color Mod submenu must be inside LPG submenu")
+for level_name, level in levels.items():
+    if level_name == "root":
+        continue
+    if isinstance(level, dict) and "knobs" in level:
+        fail(f"{level_name} should not define submenu knobs")
 
 print("PASS: module metadata checks")
