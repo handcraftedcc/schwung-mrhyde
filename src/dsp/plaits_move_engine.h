@@ -60,7 +60,6 @@ typedef struct {
 
     float lpg_decay;
     float lpg_color;
-    int lpg_retrig;
 
     ppf_mod_amounts_t pitch_mod;
     ppf_mod_amounts_t harmonics_mod;
@@ -102,7 +101,7 @@ typedef struct {
     int unison;
     float detune;
     float spread;
-    float glide_ms;
+    int glide_ms;
 
 } ppf_params_t;
 

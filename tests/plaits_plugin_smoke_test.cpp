@@ -59,7 +59,8 @@ int main() {
     api->set_param(inst, "fm_amount", "0.2");
     api->set_param(inst, "voice_mode", "poly");
     api->set_param(inst, "lfo_shape", "saw");
-    api->set_param(inst, "lpg_retrig", "on");
+    api->set_param(inst, "glide_ms", "127");
+    api->set_param(inst, "pitch_mod_lfo_amt", "12");
 
     char model_buf[32];
     memset(model_buf, 0, sizeof(model_buf));
@@ -88,11 +89,26 @@ int main() {
     }
 
     memset(enum_buf, 0, sizeof(enum_buf));
-    if (api->get_param(inst, "lpg_retrig", enum_buf, (int)sizeof(enum_buf)) < 0) {
-        fail("get_param(lpg_retrig) failed");
+    if (api->get_param(inst, "lpg_retrig", enum_buf, (int)sizeof(enum_buf)) >= 0) {
+        fail("lpg_retrig should not exist");
     }
-    if (strcmp(enum_buf, "on") != 0) {
-        fail("lpg_retrig should return enum text");
+
+    char glide_buf[32];
+    memset(glide_buf, 0, sizeof(glide_buf));
+    if (api->get_param(inst, "glide_ms", glide_buf, (int)sizeof(glide_buf)) < 0) {
+        fail("get_param(glide_ms) failed");
+    }
+    if (strcmp(glide_buf, "125") != 0) {
+        fail("glide_ms should quantize to 5ms integer steps");
+    }
+
+    char pitch_mod_buf[32];
+    memset(pitch_mod_buf, 0, sizeof(pitch_mod_buf));
+    if (api->get_param(inst, "pitch_mod_lfo_amt", pitch_mod_buf, (int)sizeof(pitch_mod_buf)) < 0) {
+        fail("get_param(pitch_mod_lfo_amt) failed");
+    }
+    if (strcmp(pitch_mod_buf, "12") != 0) {
+        fail("pitch_mod_lfo_amt should support wider pitch range values");
     }
 
     char hierarchy_buf[8192];

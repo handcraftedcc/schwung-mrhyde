@@ -54,6 +54,11 @@ static inline int clampi(int v, int lo, int hi) {
     return v;
 }
 
+static inline int quantize_step(int v, int step) {
+    if (step <= 1) return v;
+    return (v / step) * step;
+}
+
 static inline int16_t float_to_i16(float v) {
     float s = clampf(v, -1.0f, 1.0f) * 32767.0f;
     int x = (int)lrintf(s);
@@ -167,8 +172,7 @@ static int write_enum_text(const char *key, int value, char *buf, int buf_len) {
     } else if (strcmp(key, "voice_mode") == 0) {
         names = kVoiceModeNames;
         count = 3;
-    } else if (strcmp(key, "lpg_retrig") == 0 ||
-               strcmp(key, "lfo_sync") == 0 ||
+    } else if (strcmp(key, "lfo_sync") == 0 ||
                strcmp(key, "lfo_retrig") == 0 ||
                strcmp(key, "env_retrig") == 0 ||
                strcmp(key, "cycle_sync") == 0 ||
@@ -352,11 +356,6 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
             inst->params.voice_mode = clampi(iv, 0, 2);
             return 1;
         }
-        if (strcmp(key, "lpg_retrig") == 0) {
-            if (!parse_boolish(val, &iv)) return 0;
-            inst->params.lpg_retrig = iv;
-            return 1;
-        }
         if (strcmp(key, "lfo_sync") == 0) {
             if (!parse_boolish(val, &iv)) return 0;
             inst->params.lfo_sync = iv;
@@ -409,14 +408,13 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_FLOAT_FIELD("fm_amount", fm_amount, 0.0f, 1.0f);
     SET_FLOAT_FIELD("lpg_decay", lpg_decay, 0.0f, 1.0f);
     SET_FLOAT_FIELD("lpg_color", lpg_color, 0.0f, 1.0f);
-    SET_INT_FIELD("lpg_retrig", lpg_retrig, 0, 1);
 
-    SET_FLOAT_FIELD("pitch_mod_lfo_amt", pitch_mod.lfo, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("pitch_mod_env_amt", pitch_mod.env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("pitch_mod_cycle_env_amt", pitch_mod.cycle_env, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("pitch_mod_random_amt", pitch_mod.random, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("pitch_mod_velocity_amt", pitch_mod.velocity, -1.0f, 1.0f);
-    SET_FLOAT_FIELD("pitch_mod_poly_aftertouch_amt", pitch_mod.poly_aftertouch, -1.0f, 1.0f);
+    SET_FLOAT_FIELD("pitch_mod_lfo_amt", pitch_mod.lfo, -48.0f, 48.0f);
+    SET_FLOAT_FIELD("pitch_mod_env_amt", pitch_mod.env, -48.0f, 48.0f);
+    SET_FLOAT_FIELD("pitch_mod_cycle_env_amt", pitch_mod.cycle_env, -48.0f, 48.0f);
+    SET_FLOAT_FIELD("pitch_mod_random_amt", pitch_mod.random, -48.0f, 48.0f);
+    SET_FLOAT_FIELD("pitch_mod_velocity_amt", pitch_mod.velocity, -48.0f, 48.0f);
+    SET_FLOAT_FIELD("pitch_mod_poly_aftertouch_amt", pitch_mod.poly_aftertouch, -48.0f, 48.0f);
 
     SET_FLOAT_FIELD("harmonics_mod_lfo_amt", harmonics_mod.lfo, -1.0f, 1.0f);
     SET_FLOAT_FIELD("harmonics_mod_env_amt", harmonics_mod.env, -1.0f, 1.0f);
@@ -480,7 +478,11 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_INT_FIELD("unison", unison, 1, 8);
     SET_FLOAT_FIELD("detune", detune, 0.0f, 1.0f);
     SET_FLOAT_FIELD("spread", spread, 0.0f, 1.0f);
-    SET_FLOAT_FIELD("glide_ms", glide_ms, 0.0f, 2000.0f);
+    if (strcmp(key, "glide_ms") == 0) {
+        int g = clampi(iv, 0, 2000);
+        inst->params.glide_ms = quantize_step(g, 5);
+        return 1;
+    }
 
     return 0;
 }
@@ -496,7 +498,6 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
     GET_FLOAT_FIELD("fm_amount", fm_amount);
     GET_FLOAT_FIELD("lpg_decay", lpg_decay);
     GET_FLOAT_FIELD("lpg_color", lpg_color);
-    GET_ENUM_FIELD("lpg_retrig", lpg_retrig);
 
     GET_FLOAT_FIELD("pitch_mod_lfo_amt", pitch_mod.lfo);
     GET_FLOAT_FIELD("pitch_mod_env_amt", pitch_mod.env);
@@ -567,7 +568,7 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
     GET_INT_FIELD("unison", unison);
     GET_FLOAT_FIELD("detune", detune);
     GET_FLOAT_FIELD("spread", spread);
-    GET_FLOAT_FIELD("glide_ms", glide_ms);
+    GET_INT_FIELD("glide_ms", glide_ms);
 
     return -1;
 }

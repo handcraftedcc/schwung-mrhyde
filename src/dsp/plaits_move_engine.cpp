@@ -180,7 +180,6 @@ void ppf_default_params(ppf_params_t *params) {
 
     params->lpg_decay = 0.35f;
     params->lpg_color = 0.55f;
-    params->lpg_retrig = 1;
 
     params->lfo_shape = PPF_LFO_SINE;
     params->lfo_rate = 2.0f;
@@ -216,7 +215,7 @@ void ppf_default_params(ppf_params_t *params) {
     params->unison = 1;
     params->detune = 0.1f;
     params->spread = 0.25f;
-    params->glide_ms = 0.0f;
+    params->glide_ms = 0;
 }
 
 struct ppf_engine_t::Impl {
@@ -361,7 +360,8 @@ void ppf_engine_t::set_params(const ppf_params_t &params) {
     params_.velocity_curve = clampf(params_.velocity_curve, 0.1f, 4.0f);
     params_.poly_aftertouch_curve = clampf(params_.poly_aftertouch_curve, 0.1f, 4.0f);
     params_.poly_aftertouch_smoothing = clampf(params_.poly_aftertouch_smoothing, 0.0f, 1.0f);
-    params_.glide_ms = clampf(params_.glide_ms, 0.0f, 2000.0f);
+    params_.glide_ms = clampi(params_.glide_ms, 0, 2000);
+    params_.glide_ms = (params_.glide_ms / 5) * 5;
     params_.spread = clampf(params_.spread, 0.0f, 1.0f);
     params_.detune = clampf(params_.detune, 0.0f, 1.0f);
 }
@@ -500,8 +500,8 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             if (!v.active && v.env_stage == ENV_OFF) continue;
 
             float note_glide = 1.0f;
-            if (params_.glide_ms > 0.0f) {
-                float glide_samples = (params_.glide_ms * 0.001f) * (float)PPF_SAMPLE_RATE;
+            if (params_.glide_ms > 0) {
+                float glide_samples = ((float)params_.glide_ms * 0.001f) * (float)PPF_SAMPLE_RATE;
                 note_glide = clampf((float)chunk / glide_samples, 0.0f, 1.0f);
             }
             v.note_current += (v.note_target - v.note_current) * note_glide;

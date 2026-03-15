@@ -33,7 +33,6 @@ required_keys = [
     "fm_amount",
     "lpg_decay",
     "lpg_color",
-    "lpg_retrig",
     "voice_mode",
     "polyphony",
     "unison",
@@ -74,11 +73,28 @@ if "morph" not in entries:
     fail("morph must be direct root parameter")
 if "fm_amount" not in entries:
     fail("fm_amount must be direct root parameter")
+if "pitch" in entries:
+    fail("pitch should be nested under LPG")
 
 labels = [e.get("label") for e in entries if isinstance(e, dict)]
-for label in ["Pitch Mod", "Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod"]:
+for label in ["Harmonics Mod", "Timbre Mod", "Morph Mod", "FM Mod", "LPG"]:
     if label not in labels:
         fail(f"missing root submenu: {label}")
+if "Pitch Mod" in labels:
+    fail("Pitch Mod should be nested under LPG")
+
+root_knobs = root.get("knobs", [])
+expected_root_knobs = [
+    "model",
+    "harmonics",
+    "timbre",
+    "morph",
+    "fm_amount",
+    "lpg_decay",
+    "lpg_color",
+]
+if root_knobs != expected_root_knobs:
+    fail(f"root knobs must be {expected_root_knobs}, got {root_knobs}")
 
 for forbidden in ["Macros", "Init / Randomize", "LPG Mod"]:
     if forbidden in labels:
@@ -102,8 +118,28 @@ expected_mod_names = {
 for dest in dests:
     for src_key, expected_name in expected_mod_names.items():
         key = f"{dest}_mod_{src_key}_amt"
-        name = chain_params.get(key, {}).get("name")
+        meta = chain_params.get(key, {})
+        name = meta.get("name")
         if name != expected_name:
             fail(f"{key} should have name '{expected_name}', got '{name}'")
+        if dest == "pitch":
+            if meta.get("min") != -48.0 or meta.get("max") != 48.0:
+                fail(f"{key} pitch modulation range should be -48..48")
+            if meta.get("step") != 1.0:
+                fail(f"{key} pitch modulation step should be 1.0")
+
+glide_meta = chain_params.get("glide_ms", {})
+if glide_meta.get("type") != "int":
+    fail("glide_ms must be int")
+if glide_meta.get("step") != 5:
+    fail("glide_ms step must be 5ms")
+
+lpg_level = levels.get("lpg", {})
+lpg_params = lpg_level.get("params", [])
+if "pitch" not in lpg_params:
+    fail("pitch must appear in LPG submenu")
+pitch_mod_in_lpg = any(isinstance(e, dict) and e.get("label") == "Pitch Mod" and e.get("level") == "pitch_mod" for e in lpg_params)
+if not pitch_mod_in_lpg:
+    fail("Pitch Mod submenu must be inside LPG submenu")
 
 print("PASS: module metadata checks")
