@@ -87,11 +87,18 @@ levels = cap.get("ui_hierarchy", {}).get("levels", {})
 root = levels.get("root", {})
 entries = root.get("params", [])
 
-for key in ["pitch", "harmonics", "timbre", "morph", "fm_amount", "lpg_decay", "lpg_color"]:
-    if key not in entries:
-        fail(f"{key} must be direct root parameter")
+main_level = levels.get("main", {})
+expected_main_params = ["model", "pitch", "harmonics", "timbre", "morph", "fm_amount", "lpg_decay", "lpg_color"]
+if main_level.get("params") != expected_main_params:
+    fail(f"main level params must be {expected_main_params}")
+
+for key in expected_main_params:
+    if key in entries:
+        fail(f"{key} should not be a direct root parameter when Main submenu is present")
 
 labels = [e.get("label") for e in entries if isinstance(e, dict)]
+if "Main" not in labels:
+    fail("missing root submenu: Main")
 if "Mod" not in labels:
     fail("missing root submenu: Mod")
 if "Filter" not in labels:
@@ -109,6 +116,8 @@ if labels.index("Filter") > labels.index("Mod"):
     fail("Filter submenu must appear above Mod submenu")
 if labels.index("Mod") > labels.index("Mod Sources"):
     fail("Mod submenu must appear above Mod Sources")
+if labels.index("Main") > labels.index("Filter"):
+    fail("Main submenu must appear above Filter submenu")
 
 root_knobs = root.get("knobs", [])
 expected_root_knobs = [
@@ -233,6 +242,7 @@ if filter_level.get("params") != ["filter_mode", "filter_cutoff", "filter_resona
     fail("filter level must expose mode, cutoff, resonance")
 
 expected_submenu_knobs = {
+    "main": ["model", "pitch", "harmonics", "timbre", "morph", "fm_amount", "lpg_decay", "lpg_color"],
     "filter": ["filter_mode", "filter_cutoff", "filter_resonance"],
     "assign1_mod": ["assign1_target", "assign1_mod_lfo_amt", "assign1_mod_env_amt", "assign1_mod_cycle_env_amt", "assign1_mod_random_amt", "assign1_mod_velocity_amt", "assign1_mod_poly_aftertouch_amt"],
     "assign2_mod": ["assign2_target", "assign2_mod_lfo_amt", "assign2_mod_env_amt", "assign2_mod_cycle_env_amt", "assign2_mod_random_amt", "assign2_mod_velocity_amt", "assign2_mod_poly_aftertouch_amt"],

@@ -32,14 +32,10 @@
             "filter_cutoff"
           ],
           "params": [
-            "model",
-            "pitch",
-            "harmonics",
-            "timbre",
-            "morph",
-            "fm_amount",
-            "lpg_decay",
-            "lpg_color",
+            {
+              "label": "Main",
+              "level": "main"
+            },
             {
               "label": "Filter",
               "level": "filter"
@@ -56,6 +52,29 @@
               "label": "Voice",
               "level": "voice"
             }
+          ]
+        },
+        "main": {
+          "name": "Main",
+          "knobs": [
+            "model",
+            "pitch",
+            "harmonics",
+            "timbre",
+            "morph",
+            "fm_amount",
+            "lpg_decay",
+            "lpg_color"
+          ],
+          "params": [
+            "model",
+            "pitch",
+            "harmonics",
+            "timbre",
+            "morph",
+            "fm_amount",
+            "lpg_decay",
+            "lpg_color"
           ]
         },
         "filter": {
