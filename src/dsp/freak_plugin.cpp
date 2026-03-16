@@ -462,37 +462,6 @@ static int append_star_to_mod_level(char *json, int cap, const char *level, int 
     return 1;
 }
 
-static int replace_quoted_token(char *json,
-                                int cap,
-                                const char *from_key,
-                                const char *to_key) {
-    if (!json || cap <= 0 || !from_key || !to_key) return 0;
-    char from_token[96];
-    char to_token[96];
-    snprintf(from_token, sizeof(from_token), "\"%s\"", from_key);
-    snprintf(to_token, sizeof(to_token), "\"%s\"", to_key);
-
-    size_t from_len = strlen(from_token);
-    size_t to_len = strlen(to_token);
-    int replacements = 0;
-    char *p = json;
-    while ((p = strstr(p, from_token)) != NULL) {
-        size_t total_len = strlen(json);
-        size_t index = (size_t)(p - json);
-        if (to_len > from_len) {
-            size_t grow = to_len - from_len;
-            if (total_len + grow >= (size_t)cap) return -1;
-            memmove(p + to_len, p + from_len, total_len - index - from_len + 1);
-        } else if (to_len < from_len) {
-            memmove(p + to_len, p + from_len, total_len - index - from_len + 1);
-        }
-        memcpy(p, to_token, to_len);
-        p += to_len;
-        ++replacements;
-    }
-    return replacements;
-}
-
 static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *buf, int buf_len) {
     int rc = get_param_from_module_json(inst, "ui_hierarchy", '{', '}', buf, buf_len);
     if (rc < 0) return rc;
@@ -510,13 +479,116 @@ static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *b
     if (append_star_to_mod_level(buf, buf_len, "harmonics_mod", harmonics_active) < 0) return -1;
     if (append_star_to_mod_level(buf, buf_len, "timbre_mod", timbre_active) < 0) return -1;
     if (append_star_to_mod_level(buf, buf_len, "cutoff_mod", cutoff_active) < 0) return -1;
-    if (inst->params.lfo_sync) {
-        if (replace_quoted_token(buf, buf_len, "lfo_rate", "lfo_rate_sync") < 0) return -1;
+
+    return (int)strlen(buf);
+}
+
+static int find_param_object_bounds(char *json,
+                                    const char *key,
+                                    size_t *out_start,
+                                    size_t *out_end) {
+    if (!json || !key || !out_start || !out_end) return -1;
+    char key_compact[96];
+    char key_spaced[96];
+    snprintf(key_compact, sizeof(key_compact), "\"key\":\"%s\"", key);
+    snprintf(key_spaced, sizeof(key_spaced), "\"key\": \"%s\"", key);
+
+    char *hit = strstr(json, key_compact);
+    if (!hit) hit = strstr(json, key_spaced);
+    if (!hit) return -1;
+
+    char *obj_start = hit;
+    while (obj_start > json && *obj_start != '{') obj_start--;
+    if (*obj_start != '{') return -1;
+
+    int depth = 0;
+    int in_string = 0;
+    int escaped = 0;
+    for (char *p = obj_start; *p; ++p) {
+        char c = *p;
+        if (in_string) {
+            if (escaped) {
+                escaped = 0;
+            } else if (c == '\\') {
+                escaped = 1;
+            } else if (c == '"') {
+                in_string = 0;
+            }
+            continue;
+        }
+        if (c == '"') {
+            in_string = 1;
+            continue;
+        }
+        if (c == '{') depth++;
+        if (c == '}') {
+            depth--;
+            if (depth == 0) {
+                *out_start = (size_t)(obj_start - json);
+                *out_end = (size_t)(p - json) + 1;
+                return 0;
+            }
+        }
     }
-    if (inst->params.random_sync) {
-        if (replace_quoted_token(buf, buf_len, "random_rate", "random_rate_sync") < 0) return -1;
+    return -1;
+}
+
+static int replace_json_range(char *json,
+                              int cap,
+                              size_t start,
+                              size_t end,
+                              const char *replacement) {
+    if (!json || cap <= 0 || !replacement) return -1;
+    size_t len = strlen(json);
+    if (start >= end || end > len) return -1;
+
+    size_t old_len = end - start;
+    size_t new_len = strlen(replacement);
+
+    if (new_len > old_len) {
+        size_t grow = new_len - old_len;
+        if (len + grow >= (size_t)cap) return -1;
+        memmove(json + start + new_len, json + end, len - end + 1);
+    } else if (new_len < old_len) {
+        memmove(json + start + new_len, json + end, len - end + 1);
     }
 
+    memcpy(json + start, replacement, new_len);
+    return 0;
+}
+
+static int rewrite_rate_param_metadata(char *json,
+                                       int cap,
+                                       const char *key,
+                                       int sync_on,
+                                       float current_hz) {
+    if (!json || cap <= 0 || !key) return -1;
+    size_t start = 0;
+    size_t end = 0;
+    if (find_param_object_bounds(json, key, &start, &end) < 0) return -1;
+
+    char replacement[512];
+    if (sync_on) {
+        int idx = nearest_sync_rate_index(current_hz, kSyncReferenceBpm);
+        snprintf(replacement, sizeof(replacement),
+                 "{\"key\":\"%s\",\"name\":\"Rate\",\"type\":\"enum\","
+                 "\"options\":[\"16 bars\",\"8 bars\",\"4 bars\",\"2 bars\",\"1 bar\","
+                 "\"1/2\",\"1/4\",\"1/8\",\"1/16\",\"1/32\",\"1/64\"],\"default\":%d}",
+                 key, idx);
+    } else {
+        snprintf(replacement, sizeof(replacement),
+                 "{\"key\":\"%s\",\"name\":\"Rate\",\"type\":\"float\",\"min\":0.01,\"max\":40.0,"
+                 "\"default\":%.6g,\"step\":0.01}",
+                 key, clampf(current_hz, 0.01f, 40.0f));
+    }
+    return replace_json_range(json, cap, start, end, replacement);
+}
+
+static int get_chain_params_dynamic(const freak_instance_t *inst, char *buf, int buf_len) {
+    int rc = get_param_from_module_json(inst, "chain_params", '[', ']', buf, buf_len);
+    if (rc < 0) return rc;
+    if (rewrite_rate_param_metadata(buf, buf_len, "lfo_rate", inst->params.lfo_sync, inst->params.lfo_rate) < 0) return -1;
+    if (rewrite_rate_param_metadata(buf, buf_len, "random_rate", inst->params.random_sync, inst->params.random_rate) < 0) return -1;
     return (int)strlen(buf);
 }
 
@@ -687,17 +759,7 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
             inst->params.lfo_rate = sync_rate_hz_from_index(iv, kSyncReferenceBpm);
             return 1;
         }
-        if (strcmp(key, "lfo_rate_sync") == 0) {
-            if (!parse_enum_or_int(val, kSyncRateNames, kSyncRateCount, &iv)) return 0;
-            inst->params.lfo_rate = sync_rate_hz_from_index(iv, kSyncReferenceBpm);
-            return 1;
-        }
         if (strcmp(key, "random_rate") == 0) {
-            if (!parse_enum_or_int(val, kSyncRateNames, kSyncRateCount, &iv)) return 0;
-            inst->params.random_rate = sync_rate_hz_from_index(iv, kSyncReferenceBpm);
-            return 1;
-        }
-        if (strcmp(key, "random_rate_sync") == 0) {
             if (!parse_enum_or_int(val, kSyncRateNames, kSyncRateCount, &iv)) return 0;
             inst->params.random_rate = sync_rate_hz_from_index(iv, kSyncReferenceBpm);
             return 1;
@@ -808,6 +870,11 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_INT_FIELD("lfo_shape", lfo_shape, 0, 5);
     if (strcmp(key, "lfo_rate") == 0) {
         float hz = clampf(fv, 0.01f, 40.0f);
+        if (inst->params.lfo_sync) {
+            bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
+            int idx = looks_like_index ? iv : nearest_sync_rate_index(hz, kSyncReferenceBpm);
+            hz = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
+        }
         inst->params.lfo_rate = hz;
         return 1;
     }
@@ -831,6 +898,11 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_INT_FIELD("random_mode", random_mode, 0, 2);
     if (strcmp(key, "random_rate") == 0) {
         float hz = clampf(fv, 0.01f, 40.0f);
+        if (inst->params.random_sync) {
+            bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
+            int idx = looks_like_index ? iv : nearest_sync_rate_index(hz, kSyncReferenceBpm);
+            hz = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
+        }
         inst->params.random_rate = hz;
         return 1;
     }
@@ -919,10 +991,10 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
 
     GET_ENUM_FIELD("lfo_shape", lfo_shape);
     if (strcmp(key, "lfo_rate") == 0) {
+        if (inst->params.lfo_sync) {
+            return write_sync_rate_text(inst->params.lfo_rate, buf, buf_len);
+        }
         return snprintf(buf, buf_len, "%.6g", clampf(inst->params.lfo_rate, 0.01f, 40.0f));
-    }
-    if (strcmp(key, "lfo_rate_sync") == 0) {
-        return write_sync_rate_text(inst->params.lfo_rate, buf, buf_len);
     }
     GET_ENUM_FIELD("lfo_sync", lfo_sync);
     GET_ENUM_FIELD("lfo_retrig", lfo_retrig);
@@ -943,10 +1015,10 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
 
     GET_ENUM_FIELD("random_mode", random_mode);
     if (strcmp(key, "random_rate") == 0) {
+        if (inst->params.random_sync) {
+            return write_sync_rate_text(inst->params.random_rate, buf, buf_len);
+        }
         return snprintf(buf, buf_len, "%.6g", clampf(inst->params.random_rate, 0.01f, 40.0f));
-    }
-    if (strcmp(key, "random_rate_sync") == 0) {
-        return write_sync_rate_text(inst->params.random_rate, buf, buf_len);
     }
     GET_ENUM_FIELD("random_sync", random_sync);
     GET_FLOAT_FIELD("random_slew", random_slew);
@@ -1102,7 +1174,7 @@ static int get_param(void *instance, const char *key, char *buf, int buf_len) {
         return get_ui_hierarchy_with_mod_stars(inst, buf, buf_len);
     }
     if (strcmp(key, "chain_params") == 0) {
-        return get_param_from_module_json(inst, "chain_params", '[', ']', buf, buf_len);
+        return get_chain_params_dynamic(inst, buf, buf_len);
     }
     return get_param_internal(inst, key, buf, buf_len);
 }

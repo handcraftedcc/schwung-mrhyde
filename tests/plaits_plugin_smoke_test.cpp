@@ -265,22 +265,40 @@ int main() {
     }
 
     api->set_param(inst, "lfo_sync", "on");
-    api->set_param(inst, "lfo_rate_sync", "1/8");
+    api->set_param(inst, "lfo_rate", "1/8");
     memset(lfo_rate_buf, 0, sizeof(lfo_rate_buf));
-    if (api->get_param(inst, "lfo_rate_sync", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
-        fail("get_param(lfo_rate_sync) failed");
+    if (api->get_param(inst, "lfo_rate", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
+        fail("get_param(lfo_rate) failed");
     }
     if (strcmp(lfo_rate_buf, "1/8") != 0) {
-        fail("lfo_rate_sync should return synced division label when sync is on");
+        fail("lfo_rate should return synced division label when sync is on");
     }
 
-    api->set_param(inst, "lfo_rate_sync", "1/64");
+    api->set_param(inst, "lfo_rate", "1/64");
     memset(lfo_rate_buf, 0, sizeof(lfo_rate_buf));
-    if (api->get_param(inst, "lfo_rate_sync", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
-        fail("get_param(lfo_rate_sync) failed after enum text set");
+    if (api->get_param(inst, "lfo_rate", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
+        fail("get_param(lfo_rate) failed after enum text set");
     }
     if (strcmp(lfo_rate_buf, "1/64") != 0) {
-        fail("lfo_rate_sync should accept and return synced fraction labels");
+        fail("lfo_rate should accept and return synced fraction labels");
+    }
+
+    api->set_param(inst, "lfo_sync", "off");
+    api->set_param(inst, "lfo_rate", "1/4");
+    char err_buf[256];
+    memset(err_buf, 0, sizeof(err_buf));
+    if (api->get_error(inst, err_buf, (int)sizeof(err_buf)) < 0) {
+        fail("get_error failed after lfo_rate enum write while sync off");
+    }
+    if (err_buf[0] != '\0') {
+        fail("lfo_rate should accept synced label input even when sync is off");
+    }
+    memset(lfo_rate_buf, 0, sizeof(lfo_rate_buf));
+    if (api->get_param(inst, "lfo_rate", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
+        fail("get_param(lfo_rate) failed after sync off stale enum write");
+    }
+    if (strchr(lfo_rate_buf, '/') != NULL) {
+        fail("lfo_rate should report numeric Hz in free mode");
     }
 
     api->set_param(inst, "random_sync", "off");
@@ -295,22 +313,39 @@ int main() {
     }
 
     api->set_param(inst, "random_sync", "on");
-    api->set_param(inst, "random_rate_sync", "1/8");
+    api->set_param(inst, "random_rate", "1/8");
     memset(random_rate_buf, 0, sizeof(random_rate_buf));
-    if (api->get_param(inst, "random_rate_sync", random_rate_buf, (int)sizeof(random_rate_buf)) < 0) {
-        fail("get_param(random_rate_sync) failed");
+    if (api->get_param(inst, "random_rate", random_rate_buf, (int)sizeof(random_rate_buf)) < 0) {
+        fail("get_param(random_rate) failed");
     }
     if (strcmp(random_rate_buf, "1/8") != 0) {
-        fail("random_rate_sync should return synced division label when sync is on");
+        fail("random_rate should return synced division label when sync is on");
     }
 
-    api->set_param(inst, "random_rate_sync", "1/64");
+    api->set_param(inst, "random_rate", "1/64");
     memset(random_rate_buf, 0, sizeof(random_rate_buf));
-    if (api->get_param(inst, "random_rate_sync", random_rate_buf, (int)sizeof(random_rate_buf)) < 0) {
-        fail("get_param(random_rate_sync) failed after enum text set");
+    if (api->get_param(inst, "random_rate", random_rate_buf, (int)sizeof(random_rate_buf)) < 0) {
+        fail("get_param(random_rate) failed after enum text set");
     }
     if (strcmp(random_rate_buf, "1/64") != 0) {
-        fail("random_rate_sync should accept and return synced fraction labels");
+        fail("random_rate should accept and return synced fraction labels");
+    }
+
+    api->set_param(inst, "random_sync", "off");
+    api->set_param(inst, "random_rate", "1/4");
+    memset(err_buf, 0, sizeof(err_buf));
+    if (api->get_error(inst, err_buf, (int)sizeof(err_buf)) < 0) {
+        fail("get_error failed after random_rate enum write while sync off");
+    }
+    if (err_buf[0] != '\0') {
+        fail("random_rate should accept synced label input even when sync is off");
+    }
+    memset(random_rate_buf, 0, sizeof(random_rate_buf));
+    if (api->get_param(inst, "random_rate", random_rate_buf, (int)sizeof(random_rate_buf)) < 0) {
+        fail("get_param(random_rate) failed after sync off stale enum write");
+    }
+    if (strchr(random_rate_buf, '/') != NULL) {
+        fail("random_rate should report numeric Hz in free mode");
     }
 
     char hierarchy_buf[32768];
@@ -320,12 +355,6 @@ int main() {
     }
     if (hierarchy_buf[0] != '{') {
         fail("ui_hierarchy should be a JSON object");
-    }
-    if (strstr(hierarchy_buf, "\"lfo_rate_sync\"") == NULL) {
-        fail("ui_hierarchy should expose lfo_rate_sync key when lfo_sync is on");
-    }
-    if (strstr(hierarchy_buf, "\"random_rate_sync\"") == NULL) {
-        fail("ui_hierarchy should expose random_rate_sync key when random_sync is on");
     }
     if (!has_json_label(hierarchy_buf, "Assign 1*")) {
         fail("ui_hierarchy should mark active assign modulation page with star");
@@ -356,12 +385,33 @@ int main() {
     }
 
     char chain_params_buf[16384];
+    api->set_param(inst, "lfo_sync", "on");
+    api->set_param(inst, "random_sync", "on");
     memset(chain_params_buf, 0, sizeof(chain_params_buf));
     if (api->get_param(inst, "chain_params", chain_params_buf, (int)sizeof(chain_params_buf)) <= 0) {
         fail("chain_params get_param returned empty");
     }
     if (chain_params_buf[0] != '[') {
         fail("chain_params should be a JSON array");
+    }
+    if (strstr(chain_params_buf, "\"key\":\"lfo_rate\",\"name\":\"Rate\",\"type\":\"enum\"") == NULL) {
+        fail("chain_params should expose lfo_rate as enum when lfo_sync is on");
+    }
+    if (strstr(chain_params_buf, "\"key\":\"random_rate\",\"name\":\"Rate\",\"type\":\"enum\"") == NULL) {
+        fail("chain_params should expose random_rate as enum when random_sync is on");
+    }
+
+    api->set_param(inst, "lfo_sync", "off");
+    api->set_param(inst, "random_sync", "off");
+    memset(chain_params_buf, 0, sizeof(chain_params_buf));
+    if (api->get_param(inst, "chain_params", chain_params_buf, (int)sizeof(chain_params_buf)) <= 0) {
+        fail("chain_params get_param returned empty after sync off");
+    }
+    if (strstr(chain_params_buf, "\"key\":\"lfo_rate\",\"name\":\"Rate\",\"type\":\"float\"") == NULL) {
+        fail("chain_params should expose lfo_rate as float when lfo_sync is off");
+    }
+    if (strstr(chain_params_buf, "\"key\":\"random_rate\",\"name\":\"Rate\",\"type\":\"float\"") == NULL) {
+        fail("chain_params should expose random_rate as float when random_sync is off");
     }
 
     char state_buf[16384];

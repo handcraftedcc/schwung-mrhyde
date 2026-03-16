@@ -42,8 +42,6 @@ required_keys = [
     "lpg_color",
     "assign1_target",
     "assign2_target",
-    "lfo_rate_sync",
-    "random_rate_sync",
     "voice_mode",
     "polyphony",
     "unison",
@@ -229,18 +227,6 @@ if lfo_rate_meta.get("min") != 0.01 or lfo_rate_meta.get("max") != 40.0:
     fail("lfo_rate range must be 0.01..40.0 Hz")
 if random_rate_meta.get("min") != 0.01 or random_rate_meta.get("max") != 40.0:
     fail("random_rate range must be 0.01..40.0 Hz")
-
-expected_rate_options = ["16 bars", "8 bars", "4 bars", "2 bars", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"]
-lfo_rate_sync_meta = chain_params.get("lfo_rate_sync", {})
-if lfo_rate_sync_meta.get("type") != "enum":
-    fail("lfo_rate_sync type must be enum")
-if lfo_rate_sync_meta.get("options") != expected_rate_options:
-    fail(f"lfo_rate_sync options must be {expected_rate_options}")
-random_rate_sync_meta = chain_params.get("random_rate_sync", {})
-if random_rate_sync_meta.get("type") != "enum":
-    fail("random_rate_sync type must be enum")
-if random_rate_sync_meta.get("options") != expected_rate_options:
-    fail(f"random_rate_sync options must be {expected_rate_options}")
 
 poly_at_curve_meta = chain_params.get("poly_aftertouch_curve", {})
 if poly_at_curve_meta.get("type") != "float":

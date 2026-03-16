@@ -813,24 +813,6 @@
         "max": 40.0
       },
       {
-        "key": "lfo_rate_sync",
-        "name": "Rate",
-        "type": "enum",
-        "options": [
-          "16 bars",
-          "8 bars",
-          "4 bars",
-          "2 bars",
-          "1 bar",
-          "1/2",
-          "1/4",
-          "1/8",
-          "1/16",
-          "1/32",
-          "1/64"
-        ]
-      },
-      {
         "key": "lfo_sync",
         "name": "Sync",
         "type": "enum",
@@ -964,24 +946,6 @@
         "type": "float",
         "min": 0.01,
         "max": 40.0
-      },
-      {
-        "key": "random_rate_sync",
-        "name": "Rate",
-        "type": "enum",
-        "options": [
-          "16 bars",
-          "8 bars",
-          "4 bars",
-          "2 bars",
-          "1 bar",
-          "1/2",
-          "1/4",
-          "1/8",
-          "1/16",
-          "1/32",
-          "1/64"
-        ]
       },
       {
         "key": "random_sync",
