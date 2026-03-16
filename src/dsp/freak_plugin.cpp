@@ -474,37 +474,6 @@ static int append_star_to_mod_level(char *json, int cap, const char *level, int 
     return 1;
 }
 
-static int replace_quoted_token(char *json,
-                                int cap,
-                                const char *from_key,
-                                const char *to_key) {
-    if (!json || cap <= 0 || !from_key || !to_key) return 0;
-    char from_token[96];
-    char to_token[96];
-    snprintf(from_token, sizeof(from_token), "\"%s\"", from_key);
-    snprintf(to_token, sizeof(to_token), "\"%s\"", to_key);
-
-    size_t from_len = strlen(from_token);
-    size_t to_len = strlen(to_token);
-    int replacements = 0;
-    char *p = json;
-    while ((p = strstr(p, from_token)) != NULL) {
-        size_t total_len = strlen(json);
-        size_t index = (size_t)(p - json);
-        if (to_len > from_len) {
-            size_t grow = to_len - from_len;
-            if (total_len + grow >= (size_t)cap) return -1;
-            memmove(p + to_len, p + from_len, total_len - index - from_len + 1);
-        } else if (to_len < from_len) {
-            memmove(p + to_len, p + from_len, total_len - index - from_len + 1);
-        }
-        memcpy(p, to_token, to_len);
-        p += to_len;
-        ++replacements;
-    }
-    return replacements;
-}
-
 static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *buf, int buf_len) {
     int rc = get_param_from_module_json(inst, "ui_hierarchy", '{', '}', buf, buf_len);
     if (rc < 0) return rc;
@@ -522,12 +491,6 @@ static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *b
     if (append_star_to_mod_level(buf, buf_len, "harmonics_mod", harmonics_active) < 0) return -1;
     if (append_star_to_mod_level(buf, buf_len, "timbre_mod", timbre_active) < 0) return -1;
     if (append_star_to_mod_level(buf, buf_len, "cutoff_mod", cutoff_active) < 0) return -1;
-    if (inst->params.lfo_sync) {
-        if (replace_quoted_token(buf, buf_len, "lfo_rate", "lfo_rate_sync") < 0) return -1;
-    }
-    if (inst->params.random_sync) {
-        if (replace_quoted_token(buf, buf_len, "random_rate", "random_rate_sync") < 0) return -1;
-    }
 
     return (int)strlen(buf);
 }
