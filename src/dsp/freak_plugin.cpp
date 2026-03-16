@@ -732,13 +732,9 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
 
     SET_INT_FIELD("lfo_shape", lfo_shape, 0, 5);
     if (strcmp(key, "lfo_rate") == 0) {
-        float rate = clampf(fv, 0.01f, 40.0f);
-        if (inst->params.lfo_sync) {
-            bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
-            int idx = looks_like_index ? iv : nearest_sync_rate_index(rate, kSyncReferenceBpm);
-            rate = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
-        }
-        inst->params.lfo_rate = rate;
+        bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
+        int idx = looks_like_index ? iv : nearest_sync_rate_index(clampf(fv, 0.01f, 40.0f), kSyncReferenceBpm);
+        inst->params.lfo_rate = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
         return 1;
     }
     SET_INT_FIELD("lfo_sync", lfo_sync, 0, 1);
@@ -760,13 +756,9 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
 
     SET_INT_FIELD("random_mode", random_mode, 0, 2);
     if (strcmp(key, "random_rate") == 0) {
-        float rate = clampf(fv, 0.01f, 40.0f);
-        if (inst->params.random_sync) {
-            bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
-            int idx = looks_like_index ? iv : nearest_sync_rate_index(rate, kSyncReferenceBpm);
-            rate = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
-        }
-        inst->params.random_rate = rate;
+        bool looks_like_index = fabsf((float)iv - fv) < 1e-6f && iv >= 0 && iv < kSyncRateCount;
+        int idx = looks_like_index ? iv : nearest_sync_rate_index(clampf(fv, 0.01f, 40.0f), kSyncReferenceBpm);
+        inst->params.random_rate = sync_rate_hz_from_index(idx, kSyncReferenceBpm);
         return 1;
     }
     SET_INT_FIELD("random_sync", random_sync, 0, 1);
@@ -851,8 +843,7 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
 
     GET_ENUM_FIELD("lfo_shape", lfo_shape);
     if (strcmp(key, "lfo_rate") == 0) {
-        if (inst->params.lfo_sync) return write_sync_rate_text(inst->params.lfo_rate, buf, buf_len);
-        return snprintf(buf, buf_len, "%.6g", inst->params.lfo_rate);
+        return write_sync_rate_text(inst->params.lfo_rate, buf, buf_len);
     }
     GET_ENUM_FIELD("lfo_sync", lfo_sync);
     GET_ENUM_FIELD("lfo_retrig", lfo_retrig);
@@ -873,8 +864,7 @@ static int get_param_internal(const freak_instance_t *inst, const char *key, cha
 
     GET_ENUM_FIELD("random_mode", random_mode);
     if (strcmp(key, "random_rate") == 0) {
-        if (inst->params.random_sync) return write_sync_rate_text(inst->params.random_rate, buf, buf_len);
-        return snprintf(buf, buf_len, "%.6g", inst->params.random_rate);
+        return write_sync_rate_text(inst->params.random_rate, buf, buf_len);
     }
     GET_ENUM_FIELD("random_sync", random_sync);
     GET_FLOAT_FIELD("random_slew", random_slew);

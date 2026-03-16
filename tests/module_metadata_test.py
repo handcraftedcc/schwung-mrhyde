@@ -206,11 +206,17 @@ for key, min_value in [
         fail(f"{key} min must be {min_value}")
 
 lfo_rate_meta = chain_params.get("lfo_rate", {})
-if lfo_rate_meta.get("type") != "float":
-    fail("lfo_rate type must stay float for continuous unsynced use")
+if lfo_rate_meta.get("type") != "enum":
+    fail("lfo_rate type must be enum for stable synced division editing")
 random_rate_meta = chain_params.get("random_rate", {})
-if random_rate_meta.get("type") != "float":
-    fail("random_rate type must stay float for continuous unsynced use")
+if random_rate_meta.get("type") != "enum":
+    fail("random_rate type must be enum for stable synced division editing")
+
+expected_rate_options = ["16 bars", "8 bars", "4 bars", "2 bars", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"]
+if lfo_rate_meta.get("options") != expected_rate_options:
+    fail(f"lfo_rate options must be {expected_rate_options}")
+if random_rate_meta.get("options") != expected_rate_options:
+    fail(f"random_rate options must be {expected_rate_options}")
 
 poly_at_curve_meta = chain_params.get("poly_aftertouch_curve", {})
 if poly_at_curve_meta.get("type") != "float":

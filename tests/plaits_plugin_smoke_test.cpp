@@ -190,9 +190,19 @@ int main() {
         fail("cycle_attack_ms should clamp to integer minimum of 1ms");
     }
 
-    api->set_param(inst, "lfo_sync", "on");
+    api->set_param(inst, "lfo_sync", "off");
     api->set_param(inst, "lfo_rate", "0");
     char lfo_rate_buf[32];
+    memset(lfo_rate_buf, 0, sizeof(lfo_rate_buf));
+    if (api->get_param(inst, "lfo_rate", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
+        fail("get_param(lfo_rate) failed");
+    }
+    if (strcmp(lfo_rate_buf, "16 bars") != 0) {
+        fail("lfo_rate should return division labels even when sync is off");
+    }
+
+    api->set_param(inst, "lfo_sync", "on");
+    api->set_param(inst, "lfo_rate", "0");
     memset(lfo_rate_buf, 0, sizeof(lfo_rate_buf));
     if (api->get_param(inst, "lfo_rate", lfo_rate_buf, (int)sizeof(lfo_rate_buf)) < 0) {
         fail("get_param(lfo_rate) failed");
