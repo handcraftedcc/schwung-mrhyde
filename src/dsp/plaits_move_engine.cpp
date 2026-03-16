@@ -555,10 +555,27 @@ void ppf_engine_t::note_on(int note, float velocity) {
     }
 
     if (mono_mode) {
-        VoiceState &v = impl_->voices[0];
-        bool retrig = !(legato && v.active && v.gate) && params_.env_retrig;
-        impl_->trigger_voice(v, note, velocity, 0.0f, 0.0f, retrig);
-        for (int i = 1; i < budget; ++i) {
+        bool any_held = false;
+        for (int i = 0; i < budget; ++i) {
+            const VoiceState &v = impl_->voices[i];
+            if (v.active && v.gate) {
+                any_held = true;
+                break;
+            }
+        }
+        bool retrig = !(legato && any_held) && params_.env_retrig;
+        for (int i = 0; i < unison; ++i) {
+            float center = 0.5f * (float)(unison - 1);
+            float detune_units = ((float)i - center);
+            float detune = detune_units * params_.detune * 0.6f;
+            float pan = 0.0f;
+            if (unison > 1) {
+                pan = ((float)i / (float)(unison - 1)) * 2.0f - 1.0f;
+                pan *= params_.spread;
+            }
+            impl_->trigger_voice(impl_->voices[i], note, velocity, detune, pan, retrig);
+        }
+        for (int i = unison; i < budget; ++i) {
             impl_->voices[i].active = false;
             impl_->voices[i].gate = false;
             impl_->voices[i].env_stage = ENV_OFF;

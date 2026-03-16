@@ -18,6 +18,9 @@ if module.get("id") != "freak":
 if module.get("name") != "Freak":
     fail("module name must be 'Freak'")
 
+if "ui" in module:
+    fail("module.json should not set a custom ui script; use default direct parameter UI")
+
 cap = module.get("capabilities", {})
 if cap.get("component_type") != "sound_generator":
     fail("component_type must be sound_generator")

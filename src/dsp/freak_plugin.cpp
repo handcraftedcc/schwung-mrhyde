@@ -415,28 +415,45 @@ static int has_active_mod_amounts(const ppf_mod_amounts_t &m) {
            fabsf(m.poly_aftertouch) > eps;
 }
 
-static int append_star_to_label(char *json, int cap, const char *label, int active) {
-    if (!json || cap <= 0 || !label || !active) return 0;
-    char needle_compact[128];
-    char needle_spaced[128];
-    snprintf(needle_compact, sizeof(needle_compact), "\"label\":\"%s\"", label);
-    snprintf(needle_spaced, sizeof(needle_spaced), "\"label\": \"%s\"", label);
+static int append_star_to_mod_level(char *json, int cap, const char *level, int active) {
+    if (!json || cap <= 0 || !level || !active) return 0;
 
-    const char *needle = needle_compact;
-    char *pos = strstr(json, needle_compact);
-    if (!pos) {
-        pos = strstr(json, needle_spaced);
-        needle = needle_spaced;
+    char level_compact[128];
+    char level_spaced[128];
+    snprintf(level_compact, sizeof(level_compact), "\"level\":\"%s\"", level);
+    snprintf(level_spaced, sizeof(level_spaced), "\"level\": \"%s\"", level);
+
+    char *level_pos = strstr(json, level_compact);
+    if (!level_pos) level_pos = strstr(json, level_spaced);
+    if (!level_pos) return 0;
+
+    char *scan = json;
+    char *label_key = NULL;
+    while (true) {
+        char *next = strstr(scan, "\"label\"");
+        if (!next || next >= level_pos) break;
+        label_key = next;
+        scan = next + 7;
     }
-    if (!pos) return 0;
+    if (!label_key) return 0;
 
-    char *insert = pos + (int)strlen(needle) - 1;
+    char *colon = strchr(label_key, ':');
+    if (!colon || colon >= level_pos) return 0;
+    char *value = colon + 1;
+    while (*value && isspace((unsigned char)*value)) value++;
+    if (*value != '"' || value >= level_pos) return 0;
+    value++;
+
+    char *label_end = value;
+    while (*label_end && *label_end != '"' && label_end < level_pos) label_end++;
+    if (*label_end != '"' || label_end >= level_pos) return 0;
+    if (label_end > value && label_end[-1] == '*') return 1;
+
     size_t len = strlen(json);
-    size_t index = (size_t)(insert - json);
+    size_t index = (size_t)(label_end - json);
     if (len + 1 >= (size_t)cap) return -1;
-
-    memmove(insert + 1, insert, len - index + 1);
-    *insert = '*';
+    memmove(label_end + 1, label_end, len - index + 1);
+    *label_end = '*';
     return 1;
 }
 
@@ -451,12 +468,12 @@ static int get_ui_hierarchy_with_mod_stars(const freak_instance_t *inst, char *b
     int timbre_active = has_active_mod_amounts(inst->params.timbre_mod);
     int cutoff_active = has_active_mod_amounts(inst->params.cutoff_mod);
 
-    if (append_star_to_label(buf, buf_len, "Assign 1", assign1_active) < 0) return -1;
-    if (append_star_to_label(buf, buf_len, "Assign 2", assign2_active) < 0) return -1;
-    if (append_star_to_label(buf, buf_len, "Pitch", pitch_active) < 0) return -1;
-    if (append_star_to_label(buf, buf_len, "Harmonics", harmonics_active) < 0) return -1;
-    if (append_star_to_label(buf, buf_len, "Timbre", timbre_active) < 0) return -1;
-    if (append_star_to_label(buf, buf_len, "Cutoff", cutoff_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "assign1_mod", assign1_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "assign2_mod", assign2_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "pitch_mod", pitch_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "harmonics_mod", harmonics_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "timbre_mod", timbre_active) < 0) return -1;
+    if (append_star_to_mod_level(buf, buf_len, "cutoff_mod", cutoff_active) < 0) return -1;
 
     return (int)strlen(buf);
 }

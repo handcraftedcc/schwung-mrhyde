@@ -73,6 +73,8 @@ int main() {
     api->set_param(inst, "filter_resonance", "0.61");
     api->set_param(inst, "glide_ms", "127");
     api->set_param(inst, "pitch_mod_lfo_amt", "12");
+    api->set_param(inst, "harmonics_mod_env_amt", "0.2");
+    api->set_param(inst, "timbre_mod_velocity_amt", "0.3");
     api->set_param(inst, "cutoff_mod_lfo_amt", "0.5");
     api->set_param(inst, "assign1_target", "morph");
     api->set_param(inst, "assign1_mod_env_amt", "0.2");
@@ -254,8 +256,26 @@ int main() {
     if (!has_json_label(hierarchy_buf, "Cutoff*")) {
         fail("ui_hierarchy should mark active cutoff modulation page with star");
     }
+    if (!has_json_label(hierarchy_buf, "Pitch*")) {
+        fail("ui_hierarchy should mark active pitch modulation page with star");
+    }
+    if (!has_json_label(hierarchy_buf, "Harmonics*")) {
+        fail("ui_hierarchy should mark active harmonics modulation page with star");
+    }
+    if (!has_json_label(hierarchy_buf, "Timbre*")) {
+        fail("ui_hierarchy should mark active timbre modulation page with star");
+    }
     if (has_json_label(hierarchy_buf, "Assign 2*")) {
         fail("ui_hierarchy should not mark inactive assign2 page");
+    }
+
+    api->set_param(inst, "timbre_mod_velocity_amt", "0");
+    memset(hierarchy_buf, 0, sizeof(hierarchy_buf));
+    if (api->get_param(inst, "ui_hierarchy", hierarchy_buf, (int)sizeof(hierarchy_buf)) <= 0) {
+        fail("ui_hierarchy get_param returned empty after timbre reset");
+    }
+    if (has_json_label(hierarchy_buf, "Timbre*")) {
+        fail("ui_hierarchy should clear timbre modulation star when inactive");
     }
 
     char chain_params_buf[16384];

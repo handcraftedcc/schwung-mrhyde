@@ -69,6 +69,58 @@ int main() {
         fail("same note should still have a single active voice");
     }
 
+    ppf_engine_t mono_engine;
+    ppf_params_t mono_params;
+    ppf_default_params(&mono_params);
+    mono_params.voice_mode = 0;  // mono
+    mono_params.unison = 3;
+    mono_engine.set_params(mono_params);
+    mono_engine.note_on(60, 1.0f);
+    render_some(mono_engine, 256, 64);
+    if (mono_engine.debug_active_voice_count() != 3) {
+        fail("mono with unison should allocate a full unison stack");
+    }
+    if (mono_engine.debug_active_note_count(60) != 3) {
+        fail("mono unison should stack voices on the played note");
+    }
+    mono_engine.note_on(64, 1.0f);
+    render_some(mono_engine, 256, 64);
+    if (mono_engine.debug_active_voice_count() != 3) {
+        fail("mono should keep unison stack size when changing notes");
+    }
+    if (mono_engine.debug_active_note_count(60) != 0) {
+        fail("mono should not allow chords when changing notes");
+    }
+    if (mono_engine.debug_active_note_count(64) != 3) {
+        fail("mono note changes should retrigger the full unison stack");
+    }
+
+    ppf_engine_t legato_engine;
+    ppf_params_t legato_params;
+    ppf_default_params(&legato_params);
+    legato_params.voice_mode = 2;  // mono-legato
+    legato_params.unison = 2;
+    legato_engine.set_params(legato_params);
+    legato_engine.note_on(67, 1.0f);
+    render_some(legato_engine, 256, 64);
+    if (legato_engine.debug_active_voice_count() != 2) {
+        fail("mono-legato with unison should allocate all unison voices");
+    }
+    if (legato_engine.debug_active_note_count(67) != 2) {
+        fail("mono-legato unison should stack voices on the played note");
+    }
+    legato_engine.note_on(71, 1.0f);
+    render_some(legato_engine, 256, 64);
+    if (legato_engine.debug_active_voice_count() != 2) {
+        fail("mono-legato should keep unison stack size when changing notes");
+    }
+    if (legato_engine.debug_active_note_count(67) != 0) {
+        fail("mono-legato should not allow chords");
+    }
+    if (legato_engine.debug_active_note_count(71) != 2) {
+        fail("mono-legato note changes should move the full unison stack");
+    }
+
     engine.note_off(60);
     render_some(engine, 32768, 128);
     if (engine.debug_active_voice_count() != 0) {

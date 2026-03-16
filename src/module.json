@@ -7,7 +7,6 @@
   "author": "move-anything contributors",
   "license": "MIT",
   "dsp": "dsp.so",
-  "ui": "ui.js",
   "api_version": 2,
   "capabilities": {
     "audio_out": true,
