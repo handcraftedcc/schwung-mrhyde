@@ -204,6 +204,33 @@ static const char *const kModelNames[] = {
     "Analog Snare Drum",
     "Analog Hi-Hat"
 };
+constexpr int kModelCount = (int)(sizeof(kModelNames) / sizeof(kModelNames[0]));
+/* Hidden from UI for now: Six OP 1/2/3, Chiptune, and drum engines. */
+static const int kVisibleModelToEngine[] = {
+    0,   /* VA VCF */
+    1,   /* Phase Distortion */
+    5,   /* Wave Terrain */
+    6,   /* String Machine */
+    8,   /* Virtual Analog */
+    9,   /* Waveshaping */
+    10,  /* FM 2-Op */
+    11,  /* Granular Formant */
+    12,  /* Harmonic */
+    13,  /* Wavetable */
+    14,  /* Chords */
+    15,  /* Vocal Speech */
+    16,  /* Swarm */
+    17,  /* Noise */
+    18,  /* Particle Noise */
+    19,  /* Inharmonic String */
+    20   /* Modal Resonator */
+};
+constexpr int kVisibleModelCount = (int)(sizeof(kVisibleModelToEngine) / sizeof(kVisibleModelToEngine[0]));
+
+static int visible_model_to_engine_index(int visible_index) {
+    int idx = clampi(visible_index, 0, kVisibleModelCount - 1);
+    return kVisibleModelToEngine[idx];
+}
 
 static float sync_rate_hz_from_index(int index, float bpm) {
     int idx = clampi(index, 0, kSyncRateCount - 1);
@@ -246,7 +273,7 @@ static int write_enum_text(const char *key, int value, char *buf, int buf_len) {
     int count = 0;
     if (strcmp(key, "model") == 0) {
         names = kModelNames;
-        count = 24;
+        count = kModelCount;
     } else if (strcmp(key, "lfo_shape") == 0) {
         names = kLfoShapeNames;
         count = 6;
@@ -726,12 +753,19 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
         return 1;
     }
 
-    if (!has_float) {
-        if (strcmp(key, "model") == 0) {
-            if (!parse_enum_or_int(val, kModelNames, 24, &iv)) return 0;
-            inst->params.model = clampi(iv, 0, 23);
+    if (strcmp(key, "model") == 0) {
+        char *int_end = NULL;
+        long raw = strtol(val, &int_end, 10);
+        if (int_end && *int_end == '\0') {
+            inst->params.model = visible_model_to_engine_index((int)raw);
             return 1;
         }
+        if (!parse_enum_or_int(val, kModelNames, kModelCount, &iv)) return 0;
+        inst->params.model = clampi(iv, 0, kModelCount - 1);
+        return 1;
+    }
+
+    if (!has_float) {
         if (strcmp(key, "lfo_shape") == 0) {
             if (!parse_enum_or_int(val, kLfoShapeNames, 6, &iv)) return 0;
             inst->params.lfo_shape = clampi(iv, 0, 5);
@@ -821,7 +855,6 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
 
     if (!has_float) return 0;
 
-    SET_INT_FIELD("model", model, 0, 23);
     SET_FLOAT_FIELD("pitch", pitch, -48.0f, 48.0f);
     SET_FLOAT_FIELD("harmonics", harmonics, 0.0f, 1.0f);
     SET_FLOAT_FIELD("timbre", timbre, 0.0f, 1.0f);

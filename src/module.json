@@ -388,12 +388,8 @@
         "options": [
           "VA VCF",
           "Phase Distortion",
-          "Six OP 1",
-          "Six OP 2",
-          "Six OP 3",
           "Wave Terrain",
           "String Machine",
-          "Chiptune",
           "Virtual Analog",
           "Waveshaping",
           "FM 2-Op",
@@ -406,10 +402,7 @@
           "Noise",
           "Particle Noise",
           "Inharmonic String",
-          "Modal Resonator",
-          "Analog Bass Drum",
-          "Analog Snare Drum",
-          "Analog Hi-Hat"
+          "Modal Resonator"
         ]
       },
       {

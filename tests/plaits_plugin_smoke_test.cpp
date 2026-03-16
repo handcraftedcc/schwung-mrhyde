@@ -94,6 +94,16 @@ int main() {
         fail("model value mismatch after set/get");
     }
 
+    api->set_param(inst, "model", "2");
+    memset(model_buf, 0, sizeof(model_buf));
+    if (api->get_param(inst, "model", model_buf, (int)sizeof(model_buf)) < 0) {
+        fail("get_param(model) failed after visible-index set");
+    }
+    if (strcmp(model_buf, "Wave Terrain") != 0) {
+        fail("model visible index mapping should select Wave Terrain");
+    }
+    api->set_param(inst, "model", "FM 2-Op");
+
     char enum_buf[64];
     memset(enum_buf, 0, sizeof(enum_buf));
     if (api->get_param(inst, "voice_mode", enum_buf, (int)sizeof(enum_buf)) < 0) {

@@ -61,10 +61,13 @@ model_meta = chain_params.get("model", {})
 if model_meta.get("type") != "enum":
     fail("model param must be enum")
 model_opts = model_meta.get("options", [])
-if not isinstance(model_opts, list) or len(model_opts) != 24:
-    fail("model enum must define exactly 24 engine names")
+if not isinstance(model_opts, list) or len(model_opts) != 17:
+    fail("model enum must define exactly 17 visible engine names")
 if "FM 2-Op" not in model_opts:
     fail("model enum options missing expected engine name 'FM 2-Op'")
+for hidden_model in ["Six OP 1", "Six OP 2", "Six OP 3", "Chiptune", "Analog Bass Drum", "Analog Snare Drum", "Analog Hi-Hat"]:
+    if hidden_model in model_opts:
+        fail(f"hidden model option should not be visible: {hidden_model}")
 for opt in model_opts:
     if not isinstance(opt, str):
         fail("model enum options must be strings")
