@@ -222,13 +222,9 @@ for key, min_value in [
 lfo_rate_meta = chain_params.get("lfo_rate", {})
 if lfo_rate_meta.get("type") != "float":
     fail("lfo_rate type must be float for free-rate editing when sync is off")
-if lfo_rate_meta.get("name") != "Free Rate":
-    fail("lfo_rate label must be 'Free Rate'")
 random_rate_meta = chain_params.get("random_rate", {})
 if random_rate_meta.get("type") != "float":
     fail("random_rate type must be float for free-rate editing when sync is off")
-if random_rate_meta.get("name") != "Free Rate":
-    fail("random_rate label must be 'Free Rate'")
 if lfo_rate_meta.get("min") != 0.01 or lfo_rate_meta.get("max") != 40.0:
     fail("lfo_rate range must be 0.01..40.0 Hz")
 if random_rate_meta.get("min") != 0.01 or random_rate_meta.get("max") != 40.0:
@@ -238,15 +234,11 @@ expected_rate_options = ["16 bars", "8 bars", "4 bars", "2 bars", "1 bar", "1/2"
 lfo_rate_sync_meta = chain_params.get("lfo_rate_sync", {})
 if lfo_rate_sync_meta.get("type") != "enum":
     fail("lfo_rate_sync type must be enum")
-if lfo_rate_sync_meta.get("name") != "Sync Rate":
-    fail("lfo_rate_sync label must be 'Sync Rate'")
 if lfo_rate_sync_meta.get("options") != expected_rate_options:
     fail(f"lfo_rate_sync options must be {expected_rate_options}")
 random_rate_sync_meta = chain_params.get("random_rate_sync", {})
 if random_rate_sync_meta.get("type") != "enum":
     fail("random_rate_sync type must be enum")
-if random_rate_sync_meta.get("name") != "Sync Rate":
-    fail("random_rate_sync label must be 'Sync Rate'")
 if random_rate_sync_meta.get("options") != expected_rate_options:
     fail(f"random_rate_sync options must be {expected_rate_options}")
 

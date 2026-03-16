@@ -820,14 +820,14 @@
       },
       {
         "key": "lfo_rate",
-        "name": "Free Rate",
+        "name": "Rate",
         "type": "float",
         "min": 0.01,
         "max": 40.0
       },
       {
         "key": "lfo_rate_sync",
-        "name": "Sync Rate",
+        "name": "Rate",
         "type": "enum",
         "options": [
           "16 bars",
@@ -973,14 +973,14 @@
       },
       {
         "key": "random_rate",
-        "name": "Free Rate",
+        "name": "Rate",
         "type": "float",
         "min": 0.01,
         "max": 40.0
       },
       {
         "key": "random_rate_sync",
-        "name": "Sync Rate",
+        "name": "Rate",
         "type": "enum",
         "options": [
           "16 bars",
