@@ -42,6 +42,15 @@ static int has_nonzero_audio(const int16_t *audio, int n) {
     return 0;
 }
 
+static int max_abs_audio(const int16_t *audio, int n) {
+    int peak = 0;
+    for (int i = 0; i < n; ++i) {
+        int v = (audio[i] < 0) ? -(int)audio[i] : (int)audio[i];
+        if (v > peak) peak = v;
+    }
+    return peak;
+}
+
 static int has_json_label(const char *json, const char *label_text) {
     if (!json || !label_text) return 0;
     char compact[128];
@@ -549,6 +558,8 @@ int main() {
     }
 
     uint8_t note_on[] = {0x90, 60, 100};
+    api->set_param(inst, "lpg_decay", "0");
+    api->set_param(inst, "env_release_ms", "0");
     api->on_midi(inst, note_on, 3, 0);
 
     int16_t audio[128 * 2];
@@ -559,6 +570,15 @@ int main() {
 
     if (!has_nonzero_audio(audio, 128 * 2)) {
         fail("rendered audio is silent after note on");
+    }
+
+    uint8_t transport_stop[] = {0xFC};
+    api->on_midi(inst, transport_stop, 1, 0);
+    for (int i = 0; i < 64; ++i) {
+        api->render_block(inst, audio, 128);
+    }
+    if (max_abs_audio(audio, 128 * 2) > 4) {
+        fail("transport stop should release held notes and silence output");
     }
 
     uint8_t note_off[] = {0x80, 60, 0};

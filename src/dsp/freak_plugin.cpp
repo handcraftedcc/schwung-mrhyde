@@ -1077,8 +1077,21 @@ static void on_midi(void *instance, const uint8_t *msg, int len, int source) {
     freak_instance_t *inst = (freak_instance_t *)instance;
     if (!inst || !msg || len < 1) return;
 
+    if (msg[0] == 0xFC) {  // MIDI Stop
+        inst->engine.panic();
+        return;
+    }
+
     uint8_t status = msg[0] & 0xF0;
     if ((status == 0x90 || status == 0x80 || status == 0xA0) && len < 3) return;
+
+    if (status == 0xB0 && len >= 3) {
+        uint8_t cc = msg[1] & 0x7F;
+        if (cc == 120 || cc == 123) {  // All Sound Off / All Notes Off
+            inst->engine.panic();
+            return;
+        }
+    }
 
     if (status == 0x90) {
         int note = msg[1] & 0x7F;

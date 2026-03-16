@@ -689,6 +689,24 @@ void ppf_engine_t::all_notes_off() {
     }
 }
 
+void ppf_engine_t::panic() {
+    int budget = impl_->active_voice_budget(params_);
+    for (int i = 0; i < budget; ++i) {
+        VoiceState &v = impl_->voices[i];
+        v.active = false;
+        v.gate = false;
+        v.trigger_blocks = 0;
+        v.release_samples_remaining = 0;
+        v.release_samples_total = 0;
+        v.env_stage = ENV_OFF;
+        v.env_value = 0.0f;
+    }
+    impl_->filter_state.z1_l = 0.0f;
+    impl_->filter_state.z2_l = 0.0f;
+    impl_->filter_state.z1_r = 0.0f;
+    impl_->filter_state.z2_r = 0.0f;
+}
+
 void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
     if (!out_l || !out_r || frames <= 0) return;
     for (int i = 0; i < frames; ++i) {
