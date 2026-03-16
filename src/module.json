@@ -502,7 +502,9 @@
           "pitch",
           "harmonics",
           "timbre",
-          "filter_cutoff"
+          "filter_cutoff",
+          "volume",
+          "pan"
         ]
       },
       {
@@ -561,7 +563,9 @@
           "pitch",
           "harmonics",
           "timbre",
-          "filter_cutoff"
+          "filter_cutoff",
+          "volume",
+          "pan"
         ]
       },
       {

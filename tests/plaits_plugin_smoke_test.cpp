@@ -78,6 +78,7 @@ int main() {
     api->set_param(inst, "timbre_mod_velocity_amt", "0.3");
     api->set_param(inst, "cutoff_mod_lfo_amt", "0.5");
     api->set_param(inst, "assign1_target", "morph");
+    api->set_param(inst, "assign2_target", "pan");
     api->set_param(inst, "assign1_mod_env_amt", "0.2");
     api->set_param(inst, "env_attack_ms", "123.7");
     api->set_param(inst, "cycle_attack_ms", "0");
@@ -182,6 +183,15 @@ int main() {
     }
     if (strcmp(assign_target_buf, "morph") != 0) {
         fail("assign1_target should return enum text");
+    }
+
+    char assign2_target_buf[32];
+    memset(assign2_target_buf, 0, sizeof(assign2_target_buf));
+    if (api->get_param(inst, "assign2_target", assign2_target_buf, (int)sizeof(assign2_target_buf)) < 0) {
+        fail("get_param(assign2_target) failed");
+    }
+    if (strcmp(assign2_target_buf, "pan") != 0) {
+        fail("assign2_target should support pan target");
     }
 
     char attack_buf[32];
@@ -325,6 +335,15 @@ int main() {
     }
     if (strcmp(restored_assign_buf, "morph") != 0) {
         fail("state restore via json_defaults should restore assign target");
+    }
+
+    char restored_assign2_buf[32];
+    memset(restored_assign2_buf, 0, sizeof(restored_assign2_buf));
+    if (api->get_param(inst_from_state, "assign2_target", restored_assign2_buf, (int)sizeof(restored_assign2_buf)) < 0) {
+        fail("get_param(assign2_target) failed on restored instance");
+    }
+    if (strcmp(restored_assign2_buf, "pan") != 0) {
+        fail("state restore via json_defaults should restore assign2 target");
     }
 
     char restored_cutoff_mod_buf[32];

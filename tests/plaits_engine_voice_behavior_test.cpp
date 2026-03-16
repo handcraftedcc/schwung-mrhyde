@@ -159,6 +159,26 @@ int main() {
         fail("held note release should eventually finish");
     }
 
+    ppf_engine_t release_timing_engine;
+    ppf_params_t release_timing_params;
+    ppf_default_params(&release_timing_params);
+    release_timing_params.voice_mode = 1;  // poly
+    release_timing_params.polyphony = 1;
+    release_timing_params.unison = 1;
+    release_timing_params.lpg_decay = 0.0f;
+    release_timing_params.env_release_ms = 5000;
+    release_timing_engine.set_params(release_timing_params);
+    release_timing_engine.note_on(60, 1.0f);
+    render_some(release_timing_engine, 512, 64);
+    release_timing_engine.note_off(60);
+    int release_samples = release_timing_engine.debug_release_samples_total_for_note(60);
+    if (release_samples <= 0) {
+        fail("note_off should initialize release timing for active note");
+    }
+    if (release_samples >= PPF_SAMPLE_RATE) {
+        fail("release timing should follow LPG decay, not ADSR release time");
+    }
+
     params.model = 0;
     engine.set_params(params);
     engine.note_on(48, 1.0f);

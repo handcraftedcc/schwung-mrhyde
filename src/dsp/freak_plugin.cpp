@@ -136,8 +136,11 @@ static const char *const kAssignTargetNames[] = {
     "pitch",
     "harmonics",
     "timbre",
-    "filter_cutoff"
+    "filter_cutoff",
+    "volume",
+    "pan"
 };
+constexpr int kAssignTargetCount = (int)(sizeof(kAssignTargetNames) / sizeof(kAssignTargetNames[0]));
 static const float kSyncReferenceBpm = 120.0f;
 static const char *const kSyncRateNames[] = {
     "16 bars",
@@ -249,7 +252,7 @@ static int write_enum_text(const char *key, int value, char *buf, int buf_len) {
     } else if (strcmp(key, "assign1_target") == 0 ||
                strcmp(key, "assign2_target") == 0) {
         names = kAssignTargetNames;
-        count = 10;
+        count = kAssignTargetCount;
     } else if (strcmp(key, "lfo_sync") == 0 ||
                strcmp(key, "lfo_retrig") == 0 ||
                strcmp(key, "env_retrig") == 0 ||
@@ -629,13 +632,13 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
             return 1;
         }
         if (strcmp(key, "assign1_target") == 0) {
-            if (!parse_enum_or_int(val, kAssignTargetNames, 10, &iv)) return 0;
-            inst->params.assign1_target = clampi(iv, 0, 9);
+            if (!parse_enum_or_int(val, kAssignTargetNames, kAssignTargetCount, &iv)) return 0;
+            inst->params.assign1_target = clampi(iv, 0, kAssignTargetCount - 1);
             return 1;
         }
         if (strcmp(key, "assign2_target") == 0) {
-            if (!parse_enum_or_int(val, kAssignTargetNames, 10, &iv)) return 0;
-            inst->params.assign2_target = clampi(iv, 0, 9);
+            if (!parse_enum_or_int(val, kAssignTargetNames, kAssignTargetCount, &iv)) return 0;
+            inst->params.assign2_target = clampi(iv, 0, kAssignTargetCount - 1);
             return 1;
         }
         if (strcmp(key, "lfo_rate") == 0) {
@@ -733,7 +736,7 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_FLOAT_FIELD("cutoff_mod_velocity_amt", cutoff_mod.velocity, -1.0f, 1.0f);
     SET_FLOAT_FIELD("cutoff_mod_poly_aftertouch_amt", cutoff_mod.poly_aftertouch, -1.0f, 1.0f);
 
-    SET_INT_FIELD("assign1_target", assign1_target, 0, 9);
+    SET_INT_FIELD("assign1_target", assign1_target, 0, kAssignTargetCount - 1);
     SET_FLOAT_FIELD("assign1_mod_lfo_amt", assign1_mod.lfo, -1.0f, 1.0f);
     SET_FLOAT_FIELD("assign1_mod_env_amt", assign1_mod.env, -1.0f, 1.0f);
     SET_FLOAT_FIELD("assign1_mod_cycle_env_amt", assign1_mod.cycle_env, -1.0f, 1.0f);
@@ -741,7 +744,7 @@ static int set_param_internal(freak_instance_t *inst, const char *key, const cha
     SET_FLOAT_FIELD("assign1_mod_velocity_amt", assign1_mod.velocity, -1.0f, 1.0f);
     SET_FLOAT_FIELD("assign1_mod_poly_aftertouch_amt", assign1_mod.poly_aftertouch, -1.0f, 1.0f);
 
-    SET_INT_FIELD("assign2_target", assign2_target, 0, 9);
+    SET_INT_FIELD("assign2_target", assign2_target, 0, kAssignTargetCount - 1);
     SET_FLOAT_FIELD("assign2_mod_lfo_amt", assign2_mod.lfo, -1.0f, 1.0f);
     SET_FLOAT_FIELD("assign2_mod_env_amt", assign2_mod.env, -1.0f, 1.0f);
     SET_FLOAT_FIELD("assign2_mod_cycle_env_amt", assign2_mod.cycle_env, -1.0f, 1.0f);

@@ -52,7 +52,9 @@
         "",
         "Assign pages set",
         "target + source",
-        "amounts. Active=*"
+        "amounts. Targets",
+        "include volume",
+        "and pan. Active=*"
       ]
     },
     {
@@ -91,7 +93,8 @@
         "are -1..1",
         "Glide is int ms",
         "in 5ms steps",
-        "LPG has long tails"
+        "Release timing",
+        "follows LPG decay"
       ]
     },
     {

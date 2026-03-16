@@ -165,6 +165,7 @@ public:
     int debug_active_voice_count() const;
     int debug_active_note_count(int note) const;
     int debug_voice_active_engine(int voice_index) const;
+    int debug_release_samples_total_for_note(int note) const;
 #endif
 
 private:

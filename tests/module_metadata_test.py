@@ -68,9 +68,9 @@ for opt in model_opts:
         fail("model enum options should use clean labels without underscores")
 
 assign_target_opts = chain_params.get("assign1_target", {}).get("options", [])
-if len(assign_target_opts) != 10:
-    fail("assign target enum must expose 10 options")
-for option in ["off", "morph", "fm_amount", "lpg_decay", "lpg_color", "filter_resonance", "filter_cutoff"]:
+if len(assign_target_opts) != 12:
+    fail("assign target enum must expose 12 options")
+for option in ["off", "morph", "fm_amount", "lpg_decay", "lpg_color", "filter_resonance", "filter_cutoff", "volume", "pan"]:
     if option not in assign_target_opts:
         fail(f"assign target enum missing option: {option}")
 

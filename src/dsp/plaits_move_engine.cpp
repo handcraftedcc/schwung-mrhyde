@@ -102,7 +102,9 @@ enum {
     PPF_ASSIGN_PITCH = 6,
     PPF_ASSIGN_HARMONICS = 7,
     PPF_ASSIGN_TIMBRE = 8,
-    PPF_ASSIGN_FILTER_CUTOFF = 9
+    PPF_ASSIGN_FILTER_CUTOFF = 9,
+    PPF_ASSIGN_VOLUME = 10,
+    PPF_ASSIGN_PAN = 11
 };
 
 enum {
@@ -140,9 +142,6 @@ static int note_release_samples(const ppf_params_t &params) {
     /* Allow long tails at high LPG decay; rely on voice stealing for budget control. */
     float decay = clampf(params.lpg_decay, 0.0f, 1.0f);
     float release_ms = 20.0f + powf(decay, 3.0f) * 12000.0f;
-    if ((float)params.env_release_ms > release_ms) {
-        release_ms = (float)params.env_release_ms;
-    }
     int release_samples = (int)(release_ms * 0.001f * (float)PPF_SAMPLE_RATE);
     if (release_samples < kChunkFrames) release_samples = kChunkFrames;
     return release_samples;
@@ -522,8 +521,8 @@ void ppf_engine_t::set_params(const ppf_params_t &params) {
     params_.filter_resonance = clampf(params_.filter_resonance, 0.0f, 1.0f);
     params_.lpg_decay = clampf(params_.lpg_decay, 0.0f, 1.0f);
     params_.lpg_color = clampf(params_.lpg_color, 0.0f, 1.0f);
-    params_.assign1_target = clampi(params_.assign1_target, PPF_ASSIGN_NONE, PPF_ASSIGN_FILTER_CUTOFF);
-    params_.assign2_target = clampi(params_.assign2_target, PPF_ASSIGN_NONE, PPF_ASSIGN_FILTER_CUTOFF);
+    params_.assign1_target = clampi(params_.assign1_target, PPF_ASSIGN_NONE, PPF_ASSIGN_PAN);
+    params_.assign2_target = clampi(params_.assign2_target, PPF_ASSIGN_NONE, PPF_ASSIGN_PAN);
     params_.polyphony = clampi(params_.polyphony, 1, PPF_MAX_VOICES);
     params_.unison = clampi(params_.unison, 1, PPF_MAX_VOICES);
     params_.voice_mode = clampi(params_.voice_mode, 0, 2);
@@ -820,6 +819,8 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             float fm_amount = params_.fm_amount;
             float lpg = params_.lpg_decay;
             float lpg_color = params_.lpg_color;
+            float volume = 1.0f;
+            float pan = v.pan;
 
             cutoff_mod_sum += ppf_modulation_sum(src, params_.cutoff_mod);
             ++cutoff_mod_count;
@@ -853,6 +854,12 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
                     case PPF_ASSIGN_FILTER_CUTOFF:
                         cutoff_mod_sum += amount;
                         break;
+                    case PPF_ASSIGN_VOLUME:
+                        volume += amount;
+                        break;
+                    case PPF_ASSIGN_PAN:
+                        pan += amount;
+                        break;
                     case PPF_ASSIGN_NONE:
                     default:
                         break;
@@ -869,6 +876,8 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             fm_amount = clampf(fm_amount, 0.0f, 1.0f);
             lpg = clampf(lpg, 0.0f, 1.0f);
             lpg_color = clampf(lpg_color, 0.0f, 1.0f);
+            volume = clampf(volume, 0.0f, 2.0f);
+            pan = clampf(pan, -1.0f, 1.0f);
 
             plaits::Patch patch{};
             patch.note = v.note_current + pitch;
@@ -894,7 +903,7 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
                 release_level = clampf((float)v.release_samples_remaining / (float)v.release_samples_total, 0.0f, 1.0f);
             }
             mods.trigger = (v.trigger_blocks > 0) ? 1.0f : 0.0f;
-            mods.level = clampf(v.velocity, 0.0f, 1.0f) * release_level;
+            mods.level = clampf(v.velocity, 0.0f, 1.0f) * release_level * volume;
             mods.frequency_patched = false;
             mods.timbre_patched = false;
             mods.morph_patched = false;
@@ -904,8 +913,8 @@ void ppf_engine_t::render(float *out_l, float *out_r, int frames) {
             plaits::Voice::Frame tmp[kChunkFrames];
             v.synth.Render(patch, mods, tmp, (size_t)chunk);
 
-            float g_l = pan_gain_left(v.pan);
-            float g_r = pan_gain_right(v.pan);
+            float g_l = pan_gain_left(pan);
+            float g_r = pan_gain_right(pan);
             float aux_mix = params_.aux_mix;
             for (int j = 0; j < chunk; ++j) {
                 float out_main = (float)tmp[j].out / 32768.0f;
@@ -981,5 +990,16 @@ int ppf_engine_t::debug_voice_active_engine(int voice_index) const {
     const VoiceState &v = impl_->voices[voice_index];
     if (!v.active) return -1;
     return v.synth.active_engine();
+}
+
+int ppf_engine_t::debug_release_samples_total_for_note(int note) const {
+    int budget = impl_->active_voice_budget(params_);
+    int best = -1;
+    for (int i = 0; i < budget; ++i) {
+        const VoiceState &v = impl_->voices[i];
+        if (!v.active || v.note != note) continue;
+        if (v.release_samples_total > best) best = v.release_samples_total;
+    }
+    return best;
 }
 #endif
