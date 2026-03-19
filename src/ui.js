@@ -1,5 +1,5 @@
 /*
- * Freak UI for Move Anything
+ * MrHyde UI for Move Anything
  *
  * Uses shared sound generator UI base for consistent preset browsing.
  * Parameter editing via shadow UI hierarchy when in chain context.
@@ -8,16 +8,16 @@
 /* Shared utilities - absolute path for module location independence */
 import { createSoundGeneratorUI } from '/data/UserData/move-anything/shared/sound_generator_ui.mjs';
 
-/* Create the UI with Freak-specific customizations */
+/* Create the UI with MrHyde-specific customizations */
 const ui = createSoundGeneratorUI({
-    moduleName: 'Freak',
+    moduleName: 'MrHyde',
 
     onInit: (state) => {
-        /* Freak-specific initialization can be added here */
+        /* MrHyde-specific initialization can be added here */
     },
 
     onTick: (state) => {
-        /* Freak-specific per-tick updates can be added here */
+        /* MrHyde-specific per-tick updates can be added here */
     },
 
     onPresetChange: (preset) => {

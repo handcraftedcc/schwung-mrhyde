@@ -15,8 +15,8 @@ module = json.loads(module_json_path.read_text())
 if module.get("id") != "freak":
     fail("module id must be 'freak'")
 
-if module.get("name") != "Freak":
-    fail("module name must be 'Freak'")
+if module.get("name") != "MrHyde":
+    fail("module name must be 'MrHyde'")
 
 if "ui" in module:
     fail("module.json should not set a custom ui script; use default direct parameter UI")

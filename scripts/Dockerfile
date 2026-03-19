@@ -1,4 +1,4 @@
-# Freak Module Build Environment
+# MrHyde Module Build Environment
 # Targets: Ableton Move (aarch64 Linux)
 
 FROM debian:bookworm

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Freak module for Move Anything (ARM64)
+# Build MrHyde module for Move Anything (ARM64)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -13,7 +13,7 @@ if [[ "${RUN_CHECKS:-1}" == "1" && ! -f "/.dockerenv" ]]; then
 fi
 
 if [[ -z "${CROSS_PREFIX:-}" && ! -f "/.dockerenv" ]]; then
-    echo "=== Freak Build (via Docker) ==="
+    echo "=== MrHyde Build (via Docker) ==="
     echo ""
 
     if ! docker image inspect "$IMAGE_NAME" &>/dev/null; then
@@ -38,7 +38,7 @@ fi
 CROSS_PREFIX="${CROSS_PREFIX:-aarch64-linux-gnu-}"
 cd "$REPO_ROOT"
 
-echo "=== Building Freak Module ==="
+echo "=== Building MrHyde Module ==="
 echo "Cross prefix: $CROSS_PREFIX"
 
 MODULE_DIR="dist/freak"

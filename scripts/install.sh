@@ -12,7 +12,7 @@ fi
 
 TARGET_DIR="/data/UserData/move-anything/modules/sound_generators/freak"
 
-echo "=== Installing Freak Module ==="
+echo "=== Installing MrHyde Module ==="
 echo "Copying module to Move..."
 ssh ableton@move.local "mkdir -p ${TARGET_DIR}"
 scp -r dist/freak/* "ableton@move.local:${TARGET_DIR}/"

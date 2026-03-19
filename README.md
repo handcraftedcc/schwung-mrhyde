@@ -1,6 +1,6 @@
-# Move Everything - Freak Module
+# Move Everything - MrHyde Module
 
-`Freak` is a MicroFreak-inspired sound generator for [Move Everything](https://github.com/charlesvestal/move-anything), built on Mutable Instruments Plaits core DSP.
+`MrHyde` is a MicroFreak-inspired sound generator for [Move Anything](https://github.com/charlesvestal/move-anything), built on Mutable Instruments Plaits core DSP.
 
 ## Highlights
 
